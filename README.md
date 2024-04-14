@@ -1,2 +1,2 @@
-# motif-finder
+# morbius
 Motif Finding via Gibbs Sampling
