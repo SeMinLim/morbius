@@ -1,2 +1,2 @@
-# morbius
-Motif Finding via Gibbs Sampling
+# Morbius
+Motif Finding via Gibbs Sampling for DNA Sequences
