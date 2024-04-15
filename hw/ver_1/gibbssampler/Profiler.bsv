@@ -11,7 +11,7 @@ import Float32::*;
 import RandomGenerator::*;
 
 import ProfilerPhase1::*;
-import ProfilerPhase2::*;
+//import ProfilerPhase2::*;
 
 
 // Sequences
@@ -43,7 +43,7 @@ module mkProfiler(ProfilerIfc);
 	endrule
 	
 	ProfilerPhase1Ifc profilerPhase1 <- mkProfilerPhase1;
-	ProfilerPhase2Ifc profilerPhase2 <- mkProfilerPhase2;
+//	ProfilerPhase2Ifc profilerPhase2 <- mkProfilerPhase2;
 
         // Profiler I/O
 	FIFO#(Bit#(SeqSize)) sequenceQ <- mkFIFO;
@@ -58,7 +58,7 @@ module mkProfiler(ProfilerIfc);
 			sequenceQ.deq;
 			let s = sequenceQ.first;
 			profilerPhase1.putSequence(s);
-			profilerPhase2.putSequence(s);
+//			profilerPhase2.putSequence(s);
 			sequenceR <= s;
 			relaySeqCnt <= relaySeqCnt + 1;
 		end else begin
@@ -73,11 +73,12 @@ module mkProfiler(ProfilerIfc);
 	endrule
 
 	Reg#(Bit#(32)) relayPssmCnt <- mkReg(0);
-	rule relayPssm;
+	rule relayPssmNPeNum;
 		if ( relayPssmCnt == 0 ) begin
 			pssmQ.deq;
 			let p = pssmQ.first;
 			profilerPhase1.putPssm(p);
+			profilerPhase1.putPeNum(fromInteger(valueOf(PeNumProfiler)));
 			pssmR <= p;
 			relayPssmCnt <= relayPssmCnt + 1;
 			$write("\033[1;33mCycle %1d -> \033[1;33m[Profiler]: \033[0m: Phase1 started!\n", cycleCount);
@@ -85,8 +86,10 @@ module mkProfiler(ProfilerIfc);
 			let p = pssmR;
 			profilerPhase1.putPssm(p);
 			if ( relayPssmCnt + 1 == fromInteger(valueOf(IterCnt)) ) begin
+				profilerPhase1.putPeNum(fromInteger(valueOf(RmndCnt)));
 				relayPssmCnt <= 0;
 			end else begin
+				profilerPhase1.putPeNum(fromInteger(valueOf(PeNumProfiler)));
 				relayPssmCnt <= relayPssmCnt + 1;
 			end
 		end
@@ -94,19 +97,19 @@ module mkProfiler(ProfilerIfc);
 
 	rule getProbabilites;
 		let p <- profilerPhase1.getProb;
-		profilerPhase2.putProb(p);
+//		profilerPhase2.putProb(p);
 	endrule
 
 	rule getSum; // 443 cycles
 		let s <- profilerPhase1.getSum;
-		profilerPhase2.putSum(s);
+//		profilerPhase2.putSum(s);
 		$write("\033[1;33mCycle %1d -> \033[1;33m[Profiler]: \033[0m: Phase1 finished!\n", cycleCount);
 	endrule
 
-	rule getResult; // 42 cycles
-		let r <- profilerPhase2.get;
-		resultQ.enq(r);
-	endrule
+//	rule getResult; // 42 cycles
+//		let r <- profilerPhase2.get;
+//		resultQ.enq(r);
+//	endrule
 
 
 	method Action putSequence(Bit#(SeqSize) s);
