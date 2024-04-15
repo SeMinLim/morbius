@@ -14,23 +14,23 @@ import ProfilerPhase1::*;
 import ProfilerPhase2::*;
 
 
+// Sequences
 typedef 56000 SeqNum;
 typedef 1000 SeqLength;
-typedef 2048 SeqSize;
-
+typedef 2048 SeqStoredSize;
+typedef TMul#(SeqLength, 2) SeqSize;
+// Motifs
 typedef 16 MotifLength;
-typedef 32 PeNum;
-
+typedef 32 PeNumProfiler;
+// Probabilities
 typedef TSub#(SeqLength, MotifLength) ProbSizeTmp;
 typedef TAdd#(ProbSizeTmp, 1) ProbSize; // 985
-typedef 31 ProbFifoSize;
-
-typedef 30 IterCnt; // ProbSize / PeNum
+typedef 31 IterCnt; // (ProbSize / PeNum) + 1
 typedef 25 RmndCnt; // ProbSize % PeNum
 
 
 interface ProfilerIfc;
-        method Action putSequence(Bit#(2000) s);
+        method Action putSequence(Bit#(SeqSize) s);
 	method Action putPssm(Vector#(MotifLength, Vector#(4, Bit#(32))) p);
         method ActionValue#(Bit#(32)) get;
 endinterface
@@ -46,16 +46,50 @@ module mkProfiler(ProfilerIfc);
 	ProfilerPhase2Ifc profilerPhase2 <- mkProfilerPhase2;
 
         // Profiler I/O
-	FIFO#(Bit#(2000)) sequenceQ <- mkFIFO;
+	FIFO#(Bit#(SeqSize)) sequenceQ <- mkFIFO;
+	Reg#(Bit#(SeqSize)) sequenceR <- mkReg(0);
 	FIFO#(Vector#(MotifLength, Vector#(4, Bit#(32)))) pssmQ <- mkFIFO;
+	Reg#(Vector#(MotifLength, Vector#(4, Bit#(32)))) pssmR <- mkReg(replicate(replicate(0)));
 	FIFO#(Bit#(32)) resultQ <- mkFIFO;
-	
+
+	Reg#(Bit#(32)) relaySeqCnt <- mkReg(0);
 	rule relaySequence;
-		sequenceQ.deq;
-		let s = sequenceQ.first;
-		profilerPhase1.putSequence(s);
-		profilerPhase2.putSequence(s);
-		$write("\033[1;33mCycle %1d -> \033[1;33m[Profiler]: \033[0m: Profiling started!\n", cycleCount);
+		if ( relaySeqCnt == 0 ) begin
+			sequenceQ.deq;
+			let s = sequenceQ.first;
+			profilerPhase1.putSequence(s);
+			profilerPhase2.putSequence(s);
+			sequenceR <= s;
+			relaySeqCnt <= relaySeqCnt + 1;
+		end else begin
+			let s = sequenceR;
+			profilerPhase1.putSequence(s);
+			if ( relaySeqCnt + 1 == fromInteger(valueOf(IterCnt)) ) begin
+				relaySeqCnt <= 0;
+			end else begin
+				relaySeqCnt <= relaySeqCnt + 1;
+			end
+		end
+	endrule
+
+	Reg#(Bit#(32)) relayPssmCnt <- mkReg(0);
+	rule relayPssm;
+		if ( relayPssmCnt == 0 ) begin
+			pssmQ.deq;
+			let p = pssmQ.first;
+			profilerPhase1.putPssm(p);
+			pssmR <= p;
+			relayPssmCnt <= relayPssmCnt + 1;
+			$write("\033[1;33mCycle %1d -> \033[1;33m[Profiler]: \033[0m: Phase1 started!\n", cycleCount);
+		end else begin
+			let p = pssmR;
+			profilerPhase1.putPssm(p);
+			if ( relayPssmCnt + 1 == fromInteger(valueOf(IterCnt)) ) begin
+				relayPssmCnt <= 0;
+			end else begin
+				relayPssmCnt <= relayPssmCnt + 1;
+			end
+		end
 	endrule
 
 	rule getProbabilites;
@@ -75,7 +109,7 @@ module mkProfiler(ProfilerIfc);
 	endrule
 
 
-	method Action putSequence(Bit#(2000) s);
+	method Action putSequence(Bit#(SeqSize) s);
                 sequenceQ.enq(s);
 	endmethod
 	method Action putPssm(Vector#(MotifLength, Vector#(4, Bit#(32))) p);
