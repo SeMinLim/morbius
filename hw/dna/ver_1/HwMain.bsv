@@ -15,29 +15,30 @@ import Serializer::*;
 import GibbsSampler::*;
 
 
+// Sequences
 typedef 56000 SeqNum;
 typedef 1000 SeqLength;
-typedef 2048 SeqSize;
-typedef TMul#(SeqNum, SeqSize) DataSize;
-
+typedef 2048 SeqStoredSize;
+typedef TMul#(SeqLength, 2) SeqSize;
+typedef TMul#(SeqNum, SeqStoredSize) DataSize;
+// Motifs
 typedef 16 MotifLength;
-typedef 32 MotifSize;
-typedef 64 PeNum;
+typedef TMul#(MotifLength, 2) MotifSize;
+typedef 64 PeNumMotif;
 typedef TMul#(SeqNum, MotifSize) DataMotifSize;
-typedef TMul#(MotifSize, PeNum) MotifRelayLength;
-typedef TDiv#(SeqNum, PeNum) MotifRelaySize;
-
+typedef TMul#(MotifSize, PeNumMotif) MotifRelayLength;
+typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize;
+// DMA
 typedef 1750 DmaReadSeqSize;
 typedef 28 DmaReadMtfSize;
 typedef TAdd#(DmaReadSeqSize, DmaReadMtfSize) DmaReadSize;
-
+// DRAM Write
 typedef TDiv#(DataSize, 512) DramWriteSeqSize;
 typedef TDiv#(DataMotifSize, 512) DramWriteMtfSize;
 typedef TAdd#(DramWriteSeqSize, DramWriteMtfSize) DramWriteSize;
-
-typedef TDiv#(SeqSize, 512) DramReadSeqSize;
+// DRAM Read
+typedef TDiv#(SeqStoredSize, 512) DramReadSeqSize;
 typedef TDiv#(DataMotifSize, 512) DramReadMtfSize;
-
 typedef 0 DramSeqAddressStart;
 typedef TDiv#(DataSize, 512) DramMtfAddressStart;
 
@@ -72,17 +73,16 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 	Reg#(Bool) dramReadMtfOn <- mkReg(False);
 	Reg#(Bool) getSequenceOn <- mkReg(True);
 	Reg#(Bool) getMotifOn <- mkReg(False);
-	Reg#(Bool) relaySequenceOn <- mkReg(True);
 	Reg#(Bool) relayMotifOn <- mkReg(False);
 
 	// GibbsSampler
 	GibbsSamplerIfc gibbsSampler <- mkGibbsSampler;
 
 	// I/O
-	FIFO#(Bit#(2000)) sequenceQ <- mkFIFO;
+	FIFO#(Bit#(SeqSize)) sequenceQ <- mkFIFO;
 	FIFO#(Bit#(MotifRelayLength)) motifQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
 	//--------------------------------------------------------------------------------------------
-	// Get Commands from Host via PCIe
+	// Get commands from the host via PCIe
 	//--------------------------------------------------------------------------------------------
 	FIFOF#(Bit#(32)) dmaReadReqQ <- mkFIFOF;
 	rule pcieDataWriter;
@@ -92,7 +92,6 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 		let a = w.addr;
 		let off = (a >> 2);
 
-		// Receive a request of reading DMA buffer from Host (Sequences)
 		if ( off == 0 ) begin
 			dmaReadReqQ.enq(d);
 		end
@@ -113,7 +112,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 		end
 	endrule
 	//--------------------------------------------------------------------------------------------
-	// Read DMA Buffer
+	// Read DMA buffer
 	//--------------------------------------------------------------------------------------------
 	Reg#(Bit#(32)) dmaReadCnt1 <- mkReg(0);
 	Reg#(Bit#(32)) dmaReadCnt2 <- mkReg(0);
@@ -142,7 +141,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 		dramWriteOn <= True;
 	endrule
 	//--------------------------------------------------------------------------------------------
-	// Store the Sequences to DRAM
+	// Store the sequences and motifs to DRAM
 	//--------------------------------------------------------------------------------------------
 	Reg#(Bit#(32)) dramWriteCnt <- mkReg(0);
 	rule dramWriter( dramWriteOn );
@@ -164,7 +163,8 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 		end
 	endrule
 	//--------------------------------------------------------------------------------------------
-	// Read a Sequence and the motifs from DRAM & Send it to DeSerializer
+	// Read one sequence and the motifs from DRAM 
+	// Send 512bits values to DeSerializer
 	//--------------------------------------------------------------------------------------------
 	Reg#(Bit#(32)) dramReadCnt <- mkReg(0);
 	rule dramReader( dramReadOn );
@@ -202,7 +202,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 		end
 	endrule
 	//--------------------------------------------------------------------------------------------
-	// Relay a Sequence to MotifFinder
+	// Relay a sequence to GibbsSampler
 	//--------------------------------------------------------------------------------------------
 	rule getSequence( getSequenceOn );
 		let s <- deserializer512b2048b.get;
@@ -210,14 +210,13 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 		getSequenceOn <= False;
 		getMotifOn <= True;
 	endrule
-	rule relaySequence( relaySequenceOn );
+	rule relaySequence;
 		sequenceQ.deq;
 		let s = sequenceQ.first;
 		gibbsSampler.putSequence(s);
-		$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: Sending a sequence finished!\n", cycleCount);
 	endrule
 	//--------------------------------------------------------------------------------------------
-	// Relay the Motifs to MotifFinder
+	// Relay the motifs to GibbsSampler
 	//--------------------------------------------------------------------------------------------
 	Reg#(Bit#(32)) getMotifCnt <- mkReg(0);
 	rule getMotif( getMotifOn );
@@ -240,12 +239,8 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 		if ( relayMotifCnt + 1 == fromInteger(valueOf(MotifRelaySize)) ) begin
 			relayMotifCnt <= 0;
 			relayMotifOn <= False;
-			$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: Sending motifs finished!\n", cycleCount);
 		end else begin
 			relayMotifCnt <= relayMotifCnt + 1;
-			if ( relayMotifCnt == 0 ) begin
-				$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: Sending motifs started!\n", cycleCount);
-			end
 		end
 	endrule
 endmodule

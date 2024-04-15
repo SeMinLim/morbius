@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
 	uint32_t seqIdx = 0;
 	char seqLine[1024];
 	char *sequences = (char*)malloc(sizeof(char)*SEQNUM*SEQLENGTH);
-	char *filename_sequences = "../../dataset/TFAP2A.fasta";
+	char *filename_sequences = "../../../dataset/TFAP2A.fasta";
 	FILE *f_data_sequences = fopen(filename_sequences, "r");
 	if ( f_data_sequences == NULL ) {
 		printf( "File not found: %s\n", filename_sequences );

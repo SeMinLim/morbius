@@ -1,4 +1,4 @@
-LIBPATH=../../../
+LIBPATH=../../../../../bluespecpcie
 #LIBOBJ=$(LIBPATH)/cpp/obj/
 
 BDBMPCIEINCLUDE= -I$(LIBPATH)/cpp/
