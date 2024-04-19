@@ -9,9 +9,24 @@
 
 // Parameter setting
 #define SEQNUM 56054
-#define SEQLENGTH 1000
-#define MOTIFNUM 5098
+#define SEQLENGTH 5000
+#define MOTIFNUM 11206
 #define MOTIFLENGTH 115
+// For dataset 1
+//#define DATASETNUM 32768
+//#define DATASETLENGTH 1000
+//#define IMPLANTNUM 1024
+//#define IMPLANTLENGTH 115
+// For dataset 2
+//#define DATASETNUM 65536
+//#define DATASETLENGTH 1000
+//#define IMPLANTNUM 2048
+//#define IMPLANTLENGTH 115
+// For dataset 3
+#define DATASETNUM 131072
+#define DATASETLENGTH 1000
+#define IMPLANTNUM 4096
+#define IMPLANTLENGTH 115
 
 
 // Main
@@ -20,7 +35,7 @@ int main() {
 	int seqIdx = 0;
 	char seqLine[1024];
 	char *sequences = (char*)malloc(sizeof(char)*SEQNUM*SEQLENGTH);
-	char *filename_sqnc = "../UPSTREAM1000.fasta";
+	char *filename_sqnc = "../UPSTREAM5000.fasta";
 	FILE* f_data_sqnc = fopen(filename_sqnc, "r");
 	if ( f_data_sqnc == NULL ) {
 		printf( "File not found: %s\n", filename_sqnc );
@@ -42,7 +57,7 @@ int main() {
 	int mtfIdx = 0;
 	char mtfLine[1024];
 	char *motifs = (char*)malloc(sizeof(char)*MOTIFNUM*MOTIFLENGTH);
-	char *filename_motif = "../MA0003.2.fasta";
+	char *filename_motif = "../MA0007.2.fasta";
 	FILE* f_data_motif = fopen(filename_motif, "r");
 	if ( f_data_motif == NULL ) {
 		printf( "File not found: %s\n", filename_motif );
@@ -68,23 +83,23 @@ int main() {
 	fflush( stdout );
 
 	// Dataset manipulation part
-	for ( int i = 0; i < SEQNUM; i ++ ) {
-		int pos = rand() % (SEQLENGTH - MOTIFLENGTH + 1);
-		for ( int j = 0; j < MOTIFLENGTH; j ++ ) {
-			int motifCnt = SEQNUM % MOTIFNUM;
-			sequences[SEQLENGTH*i + pos + j] = motifs[MOTIFLENGTH*motifCnt + j];
+	for ( int i = 0; i < DATASETNUM; i ++ ) {
+		int pos = rand() % (DATASETLENGTH - IMPLANTLENGTH + 1);
+		for ( int j = 0; j < IMPLANTLENGTH; j ++ ) {
+			int motifCnt = DATASETNUM % IMPLANTNUM;
+			sequences[DATASETLENGTH*i + pos + j] = motifs[IMPLANTLENGTH*motifCnt + j];
 		}
 	}
 	printf( "Manipulating dataset finished!\n" );
 	fflush( stdout );
 
 	// Print the results
-	char *filename_result = "../TFAP2A.fasta";
+	char *filename_result = "../DATASET_3.fasta";
 	FILE *f_data_result = fopen(filename_result, "w");
-	for ( int i = 0; i < SEQNUM; i ++ ) {
+	for ( int i = 0; i < DATASETNUM; i ++ ) {
 		fprintf(f_data_result, ">%d\n", i);
-		for ( int j = 0; j < SEQLENGTH; j ++ ) {
-			fputc(toupper(sequences[SEQLENGTH*i + j]), f_data_result);
+		for ( int j = 0; j < DATASETLENGTH; j ++ ) {
+			fputc(toupper(sequences[DATASETLENGTH*i + j]), f_data_result);
 		}
 		fputc('\n', f_data_result);
 	}
