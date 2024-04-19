@@ -5,13 +5,13 @@ import Vector::*;
 import BRAM::*;
 import BRAMFIFO::*;
 
-//import ScoreCalculator::*;
-//import PssmMaker::*;
+import ScoreCalculator::*;
+import PssmMaker::*;
 import Profiler::*;
 
 
 // Sequences
-typedef 56000 SeqNum;
+typedef 32768 SeqNum;
 typedef 1000 SeqLength;
 typedef 2048 SeqStoredSize;
 typedef TMul#(SeqLength, 2) SeqSize;
@@ -37,10 +37,10 @@ module mkGibbsSampler(GibbsSamplerIfc);
 	endrule
 
 	// Score Calculator
-//	ScoreCalculatorIfc scoreCalculator <- mkScoreCalculator;
+	ScoreCalculatorIfc scoreCalculator <- mkScoreCalculator;
 
 	// PSSM Maker
-//	PssmMakerIfc pssmMaker <- mkPssmMaker;
+	PssmMakerIfc pssmMaker <- mkPssmMaker;
 
 	// Profiler
 	ProfilerIfc profiler <- mkProfiler;
@@ -55,8 +55,8 @@ module mkGibbsSampler(GibbsSamplerIfc);
 	rule makePssm;
 		motifQ.deq;
 		let m = motifQ.first;
-//		pssmMaker.putMotif(m);
-//		scoreCalculator.putMotifUnchanged(m);
+		pssmMaker.putMotif(m);
+		scoreCalculator.putMotifUnchanged(m);
 		if ( makePssmCnt + 1 == fromInteger(valueOf(MotifRelaySize)) ) begin
 			makePssmCnt <= 0;
 		end else begin
@@ -74,7 +74,7 @@ module mkGibbsSampler(GibbsSamplerIfc);
 		$write("\033[1;33mCycle %1d -> \033[1;33m[GibbsSampler]: \033[0m: Sending a sequence to Profiler finished!\n", cycleCount);
 	endrule
 	rule relayPssmToProfiler; // 925 cyckes
-//		let p <- pssmMaker.get;
+		let p <- pssmMaker.get;
 		Vector#(MotifLength, Vector#(4, Bit#(32))) p = replicate(replicate(0));
 		profiler.putPssm(p);
 		$write("\033[1;33mCycle %1d -> \033[1;33m[GibbsSampler]: \033[0m: Sending PSSM to Profiler finished!\n", cycleCount);
@@ -82,7 +82,7 @@ module mkGibbsSampler(GibbsSamplerIfc);
 
 	rule calScore; // 487 cycles
 		let m <- profiler.get;
-//		scoreCalculator.putMotifChanged(m);
+		scoreCalculator.putMotifChanged(m);
 		$write("\033[1;33mCycle %1d -> \033[1;33m[GibbsSampler]: \033[0m: Sending a updated motif to ScoreCalculator finished!\n", cycleCount);
 	endrule
 

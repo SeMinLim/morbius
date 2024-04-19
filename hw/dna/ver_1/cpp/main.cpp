@@ -13,7 +13,7 @@
 
 
 // Parameter setting
-#define SEQNUM 56000
+#define SEQNUM 32768
 #define SEQLENGTH 1000
 #define MOTIFLENGTH 16
 
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
 	uint32_t seqIdx = 0;
 	char seqLine[1024];
 	char *sequences = (char*)malloc(sizeof(char)*SEQNUM*SEQLENGTH);
-	char *filename_sequences = "../../../dataset/TFAP2A.fasta";
+	char *filename_sequences = "../../../dataset/DATASET_1.fasta";
 	FILE *f_data_sequences = fopen(filename_sequences, "r");
 	if ( f_data_sequences == NULL ) {
 		printf( "File not found: %s\n", filename_sequences );
@@ -131,9 +131,9 @@ int main(int argc, char** argv) {
 	// Stage5: Do 2-bit encoding for the motifs
 	// To fit 128bits interface of DMA buffer,
 	// 1 128bits buffer can consist of 4 2bits encoded motifs
-	// We need 14000 128bits buffers
+	// We need 8192 128bits buffers
 	//-------------------------------------------------------------------------------
-	uint8_t *motifsEncoded = (uint8_t*)malloc(sizeof(uint8_t)*14000*(128/8));
+	uint8_t *motifsEncoded = (uint8_t*)malloc(sizeof(uint8_t)*8192*(128/8));
 	encoderMtf(&motifsEncoded[0], &motifs[0]);
 	printf( "[SW]: Encoding the motifs finished!\n" );
 	fflush( stdout );
@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
 	fflush( stdout );
 	//-------------------------------------------------------------------------------
 	// Stage6: Send the motifs to FPGA through DMA
-	// 14000 x 16B(128bits)
+	// 8192 x 16B(128bits)
 	//-------------------------------------------------------------------------------
 	idx = 0;
 	size = 14000*(128/8);

@@ -15,8 +15,9 @@ import Serializer::*;
 import GibbsSampler::*;
 
 
+// Dataset 1
 // Sequences
-typedef 56000 SeqNum;
+typedef 32768 SeqNum;
 typedef 1000 SeqLength;
 typedef 2048 SeqStoredSize;
 typedef TMul#(SeqLength, 2) SeqSize;
@@ -29,8 +30,8 @@ typedef TMul#(SeqNum, MotifSize) DataMotifSize;
 typedef TMul#(MotifSize, PeNumMotif) MotifRelayLength;
 typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize;
 // DMA
-typedef 1750 DmaReadSeqSize;
-typedef 28 DmaReadMtfSize;
+typedef 1024 DmaReadSeqSize;
+typedef 16 DmaReadMtfSize;
 typedef TAdd#(DmaReadSeqSize, DmaReadMtfSize) DmaReadSize;
 // DRAM Write
 typedef TDiv#(DataSize, 512) DramWriteSeqSize;

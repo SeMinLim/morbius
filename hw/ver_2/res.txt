@@ -1,9 +1,0 @@
-software shm_open /bdbm583429 returned 3 with errno 0
-bsim PCIe interface init done!
-Magic: c001d00d
-[SW]: Reading the sequence file finished!
-[SW]: Encoding the sequences finished!
-[SW]: Designating the motifs randomly finished!
-[SW]: Encoding the motifs finished!
-[SW]: Sending the encoded sequences to DMA buffer finished!
-[SW]: Sending the encoded motifs finished!
