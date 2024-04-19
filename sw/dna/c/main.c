@@ -13,12 +13,11 @@
 
 
 // Parameter setting
-#define SEQNUM 56054
+#define SEQNUM 32768
 #define SEQLENGTH 1000
-#define ANSNUM 5098
-#define MOTIFLENGTH 15
+#define MOTIFLENGTH 16
 #define NUMSEEDS 3
-#define NUMITER 10
+#define NUMITER 1
 
 
 // Elapsed time checker
@@ -26,23 +25,6 @@ static inline double timeCheckerCPU(void) {
         struct rusage ru;
         getrusage(RUSAGE_SELF, &ru);
         return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000;
-}
-
-// Random number generator based on LFSR
-uint32_t lfsr32 = 0xACE8F;
-uint32_t lfsr31 = 0x23456789;
-uint32_t shift_lfsr( uint32_t *lfsr, uint32_t polynomial_mask ) {
-	uint32_t feedback = *lfsr & 1;
-	*lfsr >>= 1;
-	if ( feedback == 1 ) *lfsr ^= polynomial_mask;
-	return *lfsr;
-}
-uint32_t rand_generator() {
-	shift_lfsr(&lfsr32, POLY_MASK_32);
-	uint32_t tmp_1 = (shift_lfsr(&lfsr32, POLY_MASK_32) ^ shift_lfsr(&lfsr31, POLY_MASK_31)) & 0xffff;
-	uint32_t tmp_2 = tmp_1 << 31;
-	uint32_t value = tmp_2 >> 31;
-	return value;
 }
 
 // Get a score of motifs
@@ -149,7 +131,7 @@ void gibbsSampler( char *results, char *sequences ) {
 	// Designate the motifs randomly first
 	char motifs[SEQNUM*MOTIFLENGTH];
 	for ( int i = 0; i < SEQNUM; i ++ ) {
-		int sp = rand_generator() % (SEQLENGTH - MOTIFLENGTH + 1);
+		int sp = rand() % (SEQLENGTH - MOTIFLENGTH + 1);
 		for ( int j = 0; j < MOTIFLENGTH; j ++ ) {
 			char c = sequences[SEQLENGTH*i + sp + j];
 			motifs[MOTIFLENGTH*i + j] = c;
@@ -228,7 +210,7 @@ int main() {
 	int seqIdx = 0;
 	char seqLine[1024];
 	char *sequences = (char*)malloc(sizeof(char)*SEQNUM*SEQLENGTH);
-	char *filename_sequences = "../dataset/TFAP2A.fasta";
+	char *filename_sequences = "../../../dataset/DATASET_1.fasta";
 	FILE* f_data_sequences = fopen(filename_sequences, "r");
 	if ( f_data_sequences == NULL ) {
 		printf( "File not found: %s\n", filename_sequences );
@@ -245,51 +227,6 @@ int main() {
 	printf( "Reading the sequence file finished!\n" );
 	fflush( stdout );
 	//--------------------------------------------------------------------------------------------
-	// Read the answer motif fasta format file then
-	//--------------------------------------------------------------------------------------------
-	int ansCnt = 0;
-	int ansIdx = 0;
-	char ansLine[1024];
-	char *answers = (char*)malloc(sizeof(char)*ANSNUM*MOTIFLENGTH);
-	char *filename_answers = "../dataset/MA0003.2.fasta";
-	FILE* f_data_answers = fopen(filename_answers, "r");
-	if ( f_data_answers == NULL ) {
-		printf( "File not found: %s\n", filename_answers );
-		exit(1);
-	}
-	while ( fgets(ansLine, sizeof(ansLine), f_data_answers) != NULL ) {
-		if ( ansLine[0] != '>' ) {
-			if ( ansCnt == 0 ) {
-				for ( int i = 0; i < 60; i ++ ) {
-					char c = ansLine[i];
-					if ( isupper(c) ) answers[ansIdx++] = c;
-				}
-				ansCnt = 1;
-			} else {
-				for ( int i = 0; i < 55; i ++ ) {
-					char c = ansLine[i];
-					if ( isupper(c) ) answers[ansIdx++] = c;
-				}
-				ansCnt = 0;
-			}
-		}
-	}
-	fclose(f_data_answers);
-	printf( "Reading the answer motifs file finished!\n" );
-	fflush( stdout );
-	//--------------------------------------------------------------------------------------------
-	// Extend the answer matrix to fit sequence matrix
-	//--------------------------------------------------------------------------------------------
-	char *motifs = (char*)malloc(sizeof(char)*SEQNUM*MOTIFLENGTH);
-	for ( int i = 0; i < SEQNUM; i ++ ) {
-		int motifCnt = SEQNUM % ANSNUM;
-		for ( int j = 0; j < MOTIFLENGTH; j ++ ) {
-			motifs[MOTIFLENGTH*i + j] = answers[MOTIFLENGTH*motifCnt + j];
-		}
-	}
-	printf( "Composing the answer motifs finished!\n" );
-	fflush( stdout );
-	//--------------------------------------------------------------------------------------------
 	// Run GibbsSampler
 	//--------------------------------------------------------------------------------------------
 	char *bestMotifs = (char*)malloc(sizeof(char)*SEQNUM*MOTIFLENGTH);
@@ -302,31 +239,14 @@ int main() {
 	fflush( stdout );
 	double processTime = processFinish - processStart;
 	//--------------------------------------------------------------------------------------------
-	// Get accuracy & Print elapsed time
+	// Print elapsed time
 	//--------------------------------------------------------------------------------------------
-	int match = 0;
-	char bestMotif[MOTIFLENGTH+1];
-	char motif[MOTIFLENGTH+1];
-	printf( "Motif Finding via Gibbs Sampling\n" );
-	fflush( stdout );
-	for ( int i = 0; i < SEQNUM; i ++ ) {
-		for ( int j = 0; j < MOTIFLENGTH; j ++ ) {
-			bestMotif[j] = bestMotifs[MOTIFLENGTH*i + j];
-			motif[j] = motifs[MOTIFLENGTH*i + j];
-		}
-		bestMotif[MOTIFLENGTH] = '\0';
-		motif[MOTIFLENGTH] = '\0';
-		
-		if ( strncmp(bestMotif, motif, 15) == 0 ) match++;
-	}
-	float accuracy = ((float)match / (float)SEQNUM) * 100;
-	printf( "Accuracy: %f\n", accuracy );
 	printf( "Elapsed Time: %.8f\n", processTime );
 	fflush( stdout );
 	//--------------------------------------------------------------------------------------------
 	// Print the results
 	//--------------------------------------------------------------------------------------------
-	char *filename_result = "TFAP2A_result.fasta";
+	char *filename_result = "DATASET_1_result.fasta";
 	FILE *f_data_result = fopen(filename_result, "w");
 	printf( "Storing Motifs Started!\n" );
 	fflush( stdout );
@@ -343,8 +263,6 @@ int main() {
 
 	// Free
 	free(sequences);
-	free(answers);
-	free(motifs);
 	free(bestMotifs);
 
 	return 0;
