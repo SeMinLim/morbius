@@ -10,7 +10,7 @@ import Float32::*;
 
 
 // Sequences
-typedef 56000 SeqNum;
+typedef 32768 SeqNum;
 typedef 1000 SeqLength;
 typedef 2048 SeqStoredSize;
 typedef TMul#(SeqLength, 2) SeqSize;
@@ -85,7 +85,7 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 			Bit#(SeqSize) sqnc = s >> (fromInteger(valueOf(PeNumProfiler)) * getProb1Cnt);
 			Bit#(32) m = truncate(sqnc >> (i * 32));
 			if ( i < n ) begin
-				for ( Integer j = 0; j < valueOf(MotifLength); j = j + 1 ) begin
+				for ( Bit#(32) j = 0; j < fromInteger(valueOf(MotifLength)); j = j + 1 ) begin
 					Bit#(2) c = truncate(m >> (j * 2));
 					if ( c == 2'b00 ) prob[i][j] = p[j][0];
 					else if ( c == 2'b01 ) prob[i][j] = p[j][1];
@@ -101,7 +101,7 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 
 		if ( getProb1Cnt == 0 ) begin
 			getProb1Cnt <= getProb1Cnt + 1;
- 			$write("\033[1;33mCycle %1d -> \033[1;33m[ProfilerPhase1]: \033[0m: Get probs started!\n", cycleCount);
+ 			$write("\033[1;33mCycle %1d -> \033[1;33m[ProfilerPhase1]: \033[0m: Started!\n", cycleCount);
 		end else begin
 			if ( getProb1Cnt + 1 == fromInteger(valueOf(IterCnt)) ) begin
 				getProb1Cnt <= 0;
@@ -153,7 +153,9 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 	Reg#(Bool) getSumTmp1On <- mkReg(True);
 	Reg#(Bool) getSumTmp2On <- mkReg(False);
 	FIFO#(Vector#(PeNumProfiler, Bit#(32))) sumTmp1Q <- mkFIFO;
+	FIFO#(Vector#(PeNumProfiler, Bit#(32))) sumTmp2Q <- mkFIFO;
 	Reg#(Bit#(32)) getSumTmp1Cnt <- mkReg(0);
+	Reg#(Bit#(32)) getSumTmp2Cnt <- mkReg(0);
 	rule getSumTmp1( getSumTmp1On );
 		Vector#(PeNumProfiler, Bit#(32)) r = replicate(0);
 		for ( Integer i = 0; i < valueOf(PeNumProfiler); i = i + 1 ) begin
@@ -164,7 +166,6 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 		if ( getSumTmp1Cnt == 0 ) begin
 			sumTmp1Q.enq(r);
 			getSumTmp1Cnt <= getSumTmp1Cnt + 1;
-			$write("\033[1;33mCycle %1d -> \033[1;33m[Phase1]: \033[0m: SumTmp started!\n", cycleCount);
 		end else begin
 			sumTmp1Q.deq;
 			let s = sumTmp1Q.first;
@@ -173,7 +174,6 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 			end
 			if ( getSumTmp1Cnt + 1 == fromInteger(valueOf(IterCnt)) ) begin
 				getSumTmp1Cnt <= 0;
-				$write("\033[1;33mCycle %1d -> \033[1;33m[Phase1]: \033[0m: SumTmp finished!\n", cycleCount);
 			end else begin
 				getSumTmp1Cnt <= getSumTmp1Cnt + 1;
 			end
@@ -182,8 +182,6 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 		end
 		probQ.enq(r);
 	endrule
-	FIFO#(Vector#(PeNumProfiler, Bit#(32))) sumTmp2Q <- mkFIFO;
-	Reg#(Bit#(32)) getSumTmp2Cnt <- mkReg(0);
 	rule getSumTmp2( getSumTmp2On );
 		Vector#(PeNumProfiler, Bit#(32)) s = replicate(0);
 		for ( Integer i = 0; i < valueOf(PeNumProfiler); i = i + 1 ) begin
@@ -193,7 +191,6 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 		if ( getSumTmp2Cnt + 2 == fromInteger(valueOf(IterCnt)) ) begin
 			sumTmp2Q.enq(s);
 			getSumTmp2Cnt <= 0;
-			$write("\033[1;33mCycle %1d -> \033[1;33m[Phase1]: \033[0m: Go to sum step!\n", cycleCount);
 		end else begin
 			sumTmp1Q.enq(s);
 			getSumTmp2Cnt <= getSumTmp2Cnt + 1;
@@ -210,7 +207,6 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 		for ( Integer i = 0; i < valueOf(SumProbPipe1); i = i + 1 ) begin
 			fpAddStage1[i].enq(p[i*2], p[i*2+1]);
 		end
-		$write("\033[1;33mCycle %1d -> \033[1;33m[Phase1]: \033[0m: sum started!\n", cycleCount);
 	endrule
 	rule getSum2;
 		Vector#(SumProbPipe1, Bit#(32)) s = replicate(0);
@@ -256,7 +252,7 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 	rule getSum6;
 		fpAddStage5.deq;
 		sumQ.enq(fpAddStage5.first);
-		$write("\033[1;33mCycle %1d -> \033[1;33m[Phase1]: \033[0m: Sum finished!\n", cycleCount);
+		$write("\033[1;33mCycle %1d -> \033[1;33m[ProfilerPhase1]: \033[0m: Finished!\n", cycleCount);
 	endrule
 
 

@@ -6,25 +6,28 @@ import BRAM::*;
 import BRAMFIFO::*;
 
 
-typedef 56000 SeqNum;
+// Sequences
+typedef 32768 SeqNum;
 typedef 1000 SeqLength;
-typedef 2048 SeqSize;
-typedef TMul#(SeqNum, SeqSize) DataSize;
-
+typedef 2048 SeqStoredSize;
+typedef TMul#(SeqLength, 2) SeqSize;
+// Motif
 typedef 16 MotifLength;
-typedef 64 PeNum;
-typedef TDiv#(SeqNum, PeNum) MotifRelaySize;
+typedef TMul#(MotifLength, 2) MotifSize;
+typedef 64 PeNumMotif;
+typedef TMul#(MotifSize, PeNumMotif) MotifRelayLength;
+typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize;
 
 
 interface ScoreCalculatorIfc;
-	method Action putMotifUnchanged(Bit#(2048) m);
+	method Action putMotifUnchanged(Bit#(MotifRelayLength) m);
 	method Action putMotifChanged(Bit#(32) m);
 	method ActionValue#(Bit#(32)) get;
 endinterface
 (* synthesize *)
 module mkScoreCalculator(ScoreCalculatorIfc);
 	// I/O
-	FIFO#(Bit#(2048)) motifUnchangedQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
+	FIFO#(Bit#(MotifRelayLength)) motifUnchangedQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
 	FIFO#(Bit#(32)) motifChangedQ <- mkFIFO;
 	FIFO#(Bit#(32)) scoreQ <- mkFIFO;
 	//--------------------------------------------------------------------------------------------
@@ -32,9 +35,9 @@ module mkScoreCalculator(ScoreCalculatorIfc);
 	//--------------------------------------------------------------------------------------------
 	// Update the motif
 	//--------------------------------------------------------------------------------------------
-	FIFO#(Bit#(2048)) motifTmpQ <- mkFIFO;
+	FIFO#(Bit#(MotifRelayLength)) motifTmpQ <- mkFIFO;
 	Reg#(Bool) changeMotifOn <- mkReg(True);
-	rule changeMotif1( changeMotifOn ); // 1 cycle
+	rule changeMotif1( changeMotifOn );
 		motifUnchangedQ.deq;
 		let m = motifUnchangedQ.first;
 		motifTmpQ.enq(m);
@@ -55,12 +58,12 @@ module mkScoreCalculator(ScoreCalculatorIfc);
 	FIFO#(Vector#(MotifLength, Vector#(4, Bit#(32)))) baseQ <- mkFIFO;
 	Reg#(Vector#(MotifLength, Vector#(4, Bit#(32)))) baseR <- mkReg(replicate(replicate(0)));
 	Reg#(Bit#(32)) pickLetterCnt <- mkReg(0);
-	rule pickLetter1( !changeMotifOn ); // MotifRelaySize-1 cycles + 1 cycle
+	rule pickLetter1( !changeMotifOn ); // 511 cycles + 1 cycle
 		motifUnchangedQ.deq;
 		let m = motifUnchangedQ.first;
 
 		Vector#(MotifLength, Vector#(4, Bit#(32))) base = baseR;
-		for ( Integer i = 0; i < valueOf(PeNum); i = i + 1 ) begin
+		for ( Integer i = 0; i < valueOf(PeNumMotif); i = i + 1 ) begin
 			Bit#(32) motif = truncate(m >> (i * 32));
 			for ( Integer j = 0; j < valueOf(MotifLength); j = j + 1 ) begin
 				Bit#(2) c = truncate(motif >> (j * 2));
@@ -110,7 +113,7 @@ module mkScoreCalculator(ScoreCalculatorIfc);
 	Reg#(Bit#(32)) scoreR <- mkReg(0);
 	Reg#(Bit#(1)) getScoreCnt1 <- mkReg(0);
 	Reg#(Bit#(32)) getScoreCnt2 <- mkReg(0);
-	rule getScore; // MotifRelaySize cycles
+	rule getScore; // 512 cycles
 		motifQ.deq;
 		let m = motifQ.first;
 
@@ -125,7 +128,7 @@ module mkScoreCalculator(ScoreCalculatorIfc);
 		end
 		
 		Bit#(32) score = scoreR;
-		for ( Integer i = 0; i < valueOf(PeNum); i = i + 1 ) begin
+		for ( Integer i = 0; i < valueOf(PeNumMotif); i = i + 1 ) begin
 			Bit#(32) motif = truncate(m >> (i * 32));
 			for ( Integer j = 0; j < valueOf(MotifLength); j = j + 1 ) begin
 				Bit#(2) c = truncate(motif >> (j * 2));
@@ -145,7 +148,7 @@ module mkScoreCalculator(ScoreCalculatorIfc);
 	endrule
 
 
-	method Action putMotifUnchanged(Bit#(2048) m);
+	method Action putMotifUnchanged(Bit#(MotifRelayLength) m);
 		motifUnchangedQ.enq(m);
 	endmethod
 	method Action putMotifChanged(Bit#(32) m);

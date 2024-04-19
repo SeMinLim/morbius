@@ -29,7 +29,7 @@ interface GibbsSamplerIfc;
 	method Action putMotif(Bit#(MotifRelayLength) m);
 endinterface
 (* synthesize *)
-module mkGibbsSampler(GibbsSamplerIfc);
+module mkGibbsSampler(GibbsSamplerIfc); // 1574 cycles
 	// Cycle Counter
 	Reg#(Bit#(32)) cycleCount <- mkReg(0);
 	rule incCycleCounter;
@@ -58,10 +58,13 @@ module mkGibbsSampler(GibbsSamplerIfc);
 		pssmMaker.putMotif(m);
 		scoreCalculator.putMotifUnchanged(m);
 		if ( makePssmCnt + 1 == fromInteger(valueOf(MotifRelaySize)) ) begin
+			pssmMaker.putStartPe(0);
 			makePssmCnt <= 0;
 		end else begin
 			if ( makePssmCnt == 0 ) begin
-				$write("\033[1;33mCycle %1d -> \033[1;33m[GibbsSampler]: \033[0m: GibbsSampler Started!\n", cycleCount);
+				pssmMaker.putStartPe(1);
+			end else begin
+				pssmMaker.putStartPe(0);
 			end
 			makePssmCnt <= makePssmCnt + 1;
 		end
@@ -71,25 +74,21 @@ module mkGibbsSampler(GibbsSamplerIfc);
 		sequenceQ.deq;
 		let s = sequenceQ.first;
 		profiler.putSequence(s);
-		$write("\033[1;33mCycle %1d -> \033[1;33m[GibbsSampler]: \033[0m: Sending a sequence to Profiler finished!\n", cycleCount);
 	endrule
-	rule relayPssmToProfiler; // 925 cyckes
+	rule relayPssmToProfiler; // 570 + 1 cyckes
 		let p <- pssmMaker.get;
-		Vector#(MotifLength, Vector#(4, Bit#(32))) p = replicate(replicate(0));
 		profiler.putPssm(p);
-		$write("\033[1;33mCycle %1d -> \033[1;33m[GibbsSampler]: \033[0m: Sending PSSM to Profiler finished!\n", cycleCount);
 	endrule
 
-	rule calScore; // 487 cycles
+	rule calScore; // 487 + 1 cycles
 		let m <- profiler.get;
 		scoreCalculator.putMotifChanged(m);
-		$write("\033[1;33mCycle %1d -> \033[1;33m[GibbsSampler]: \033[0m: Sending a updated motif to ScoreCalculator finished!\n", cycleCount);
 	endrule
 
-//	rule getResult; // 485 cycles 
-//		let s <- scoreCalculator.get;
-//		$write("\033[1;33mCycle %1d -> \033[1;33m[GibbsSampler]: \033[0m: GibbsSampler finished!\n", cycleCount);
-//	endrule
+	rule getResult; // 514 + 1 cycles 
+		let s <- scoreCalculator.get;
+		$write("\033[1;33mCycle %1d -> \033[1;33m[GibbsSampler]: \033[0m: GibbsSampler finished!\n", cycleCount);
+	endrule
 
 
 	method Action putSequence(Bit#(SeqSize) s);
