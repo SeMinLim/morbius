@@ -58,14 +58,16 @@ module mkPssmMaker(PssmMakerIfc); // 570 cycles
 		let startPe = startPeQ.first;
 
 		Vector#(MotifLength, Vector#(4, Bit#(32))) base = baseR;
-		for ( Bit#(32) i = startPe; i < fromInteger(valueOf(PeNumMotif)); i = i + 1 ) begin
-			Bit#(32) m = truncate(motif >> (i * 32));
-			for ( Bit#(32) j = 0; j < fromInteger(valueOf(MotifLength)); j = j + 1 ) begin
-				Bit#(2) c = truncate(m >> (j * 2));
-				if ( c == 2'b00 ) base[j][0] = base[j][0] + 1;
-				else if ( c == 2'b01 ) base[j][1] = base[j][1] + 1;
-				else if ( c == 2'b10 ) base[j][2] = base[j][2] + 1;
-				else if ( c == 2'b11 ) base[j][3] = base[j][3] + 1;
+		for ( Bit#(32) i = 0; i < fromInteger(valueOf(PeNumMotif)); i = i + 1 ) begin
+			if ( i >= startPe ) begin
+				Bit#(32) m = truncate(motif >> (i * 32));
+				for ( Bit#(32) j = 0; j < fromInteger(valueOf(MotifLength)); j = j + 1 ) begin
+					Bit#(2) c = truncate(m >> (j * 2));
+					if ( c == 2'b00 ) base[j][0] = base[j][0] + 1;
+					else if ( c == 2'b01 ) base[j][1] = base[j][1] + 1;
+					else if ( c == 2'b10 ) base[j][2] = base[j][2] + 1;
+					else if ( c == 2'b11 ) base[j][3] = base[j][3] + 1;
+				end
 			end
 		end
 
