@@ -40,8 +40,8 @@ typedef TAdd#(DramWriteSeqSize, DramWriteMtfSize) DramWriteSize;
 // DRAM Read
 typedef TDiv#(SeqStoredSize, 512) DramReadSeqSize;
 typedef TDiv#(DataMotifSize, 512) DramReadMtfSize;
-typedef 0 DramSeqAddressStart;
-typedef TDiv#(DataSize, 512) DramMtfAddressStart;
+typedef 0 DramSeqAddrStart;
+typedef TDiv#(DataSize, 512) DramMtfAddrStart;
 
 
 interface HwMainIfc;
@@ -69,11 +69,9 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 
 	// Rule On/Off
 	Reg#(Bool) dramWriteOn <- mkReg(False);
-	Reg#(Bool) dramReadOn <- mkReg(False);
 	Reg#(Bool) dramReadSeqOn <- mkReg(True);
 	Reg#(Bool) dramReadMtfOn <- mkReg(False);
-	Reg#(Bool) getSequenceOn <- mkReg(True);
-	Reg#(Bool) getMotifOn <- mkReg(False);
+	Reg#(Bool) relaySequenceOn <- mkReg(True);
 	Reg#(Bool) relayMotifOn <- mkReg(False);
 
 	// GibbsSampler
@@ -156,7 +154,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 			if ( dramWriteCnt == fromInteger(valueOf(DramWriteSize)) ) begin
 				dramWriteCnt <= 0;
 				dramWriteOn <= False;
-				dramReadOn <= True;
+				dramReadSeqOn <= True;
 				$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: Burst DRAM write finished!\n", cycleCount);
 			end else begin
 				dramWriteCnt <= dramWriteCnt + 1;
@@ -167,78 +165,63 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 	// Read one sequence and the motifs from DRAM 
 	// Send 512bits values to DeSerializer
 	//--------------------------------------------------------------------------------------------
-	Reg#(Bit#(32)) dramReadCnt <- mkReg(0);
-	rule dramReader( dramReadOn );
-		Bit#(64) dramAddressStart = 0;
-		Bit#(32) dramReadSize = 0;
-		if ( dramReadSeqOn ) begin
-			dramAddressStart = fromInteger(valueOf(DramSeqAddressStart));
-			dramReadSize = fromInteger(valueOf(DramReadSeqSize));
-		end else if ( dramReadMtfOn ) begin
-			dramAddressStart = fromInteger(valueOf(DramMtfAddressStart));
-			dramReadSize = fromInteger(valueOf(DramReadMtfSize));
-		end
-
-		if ( dramReadCnt == 0 ) begin
-			dramArbiter.users[0].cmd(dramAddressStart, dramReadSize, False);
-			dramReadCnt <= dramReadCnt + 1;
-			$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: Burst DRAM read started!\n", cycleCount);
+	Reg#(Bit#(32)) dramReadSeqCnt <- mkReg(0);
+	rule dramReaderSeq( dramReadSeqOn );
+		if ( dramReadSeqCnt == 0 ) begin
+			dramArbiter.users[0].cmd(fromInteger(valueOf(DramSeqAddrStart)), fromInteger(valueOf(DramReadSeqSize)), False);
+			dramReadSeqCnt <= dramReadSeqCnt + 1;
+			$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: Burst DRAM read started! [SEQ]\n", cycleCount);
 		end else begin
 			let d <- dramArbiter.users[0].read;
 			deserializer512b2048b.put(d);
-			if ( dramReadCnt == dramReadSize ) begin
-				dramReadCnt <= 0;
-				if ( dramReadSeqOn ) begin
-					dramReadSeqOn <= False;
-					dramReadMtfOn <= True;
-				end else if ( dramReadMtfOn ) begin
-					dramReadSeqOn <= True;
-					dramReadMtfOn <= False;
-					dramReadOn <= False;
-				end
-				$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: Burst DRAM read finished!\n", cycleCount);
+			if ( dramReadSeqCnt == fromInteger(valueOf(DramReadSeqSize)) ) begin
+				dramReadSeqCnt <= 0;
+				dramReadSeqOn <= False;
+				dramReadMtfOn <= True;
+				$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: Burst DRAM read finished! [SEQ]\n", cycleCount);
 			end else begin
-				dramReadCnt <= dramReadCnt + 1;
+				dramReadSeqCnt <= dramReadSeqCnt + 1;
+			end
+		end
+	endrule
+	Reg#(Bit#(32)) dramReadMtfCnt <- mkReg(0);
+	rule dramReaderMtf( dramReadMtfOn );
+		if ( dramReadMtfCnt == 0 ) begin
+			dramArbiter.users[0].cmd(fromInteger(valueOf(DramMtfAddrStart)), fromInteger(valueOf(DramReadMtfSize)), False);
+			dramReadMtfCnt <= dramReadMtfCnt + 1;
+			$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: Burst DRAM read started! [MTF]\n", cycleCount);
+		end else begin
+			let d <- dramArbiter.users[0].read;
+			deserializer512b2048b.put(d);
+			if ( dramReadMtfCnt == fromInteger(valueOf(DramReadMtfSize)) ) begin
+				dramReadMtfCnt <= 0;
+				dramReadMtfOn <= False;
+				dramReadSeqOn <= True;
+				$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: Burst DRAM read finished! [Mtf]\n", cycleCount);
+			end else begin
+				dramReadMtfCnt <= dramReadMtfCnt + 1;
 			end
 		end
 	endrule
 	//--------------------------------------------------------------------------------------------
 	// Relay a sequence to GibbsSampler
 	//--------------------------------------------------------------------------------------------
-	rule getSequence( getSequenceOn );
+	rule relaySequence( relaySequenceOn );
 		let s <- deserializer512b2048b.get;
-		sequenceQ.enq(truncate(s));
-		getSequenceOn <= False;
-		getMotifOn <= True;
-	endrule
-	rule relaySequence;
-		sequenceQ.deq;
-		let s = sequenceQ.first;
-		gibbsSampler.putSequence(s);
+		gibbsSampler.putSequence(truncate(s));
+		relaySequenceOn <= False;
+		relayMotifOn <= True;
 	endrule
 	//--------------------------------------------------------------------------------------------
 	// Relay the motifs to GibbsSampler
 	//--------------------------------------------------------------------------------------------
-	Reg#(Bit#(32)) getMotifCnt <- mkReg(0);
-	rule getMotif( getMotifOn );
-		let m <- deserializer512b2048b.get;
-		motifQ.enq(m);
-		if ( getMotifCnt + 1 == fromInteger(valueOf(MotifRelaySize)) ) begin
-			getMotifCnt <= 0;
-			getSequenceOn <= True;
-			getMotifOn <= False;
-			relayMotifOn <= True;
-		end else begin
-			getMotifCnt <= getMotifCnt + 1;
-		end
-	endrule
 	Reg#(Bit#(32)) relayMotifCnt <- mkReg(0);
 	rule relayMotif( relayMotifOn );
-		motifQ.deq;
-		let m = motifQ.first;
+		let m <- deserializer512b2048b.get;
 		gibbsSampler.putMotif(m);
 		if ( relayMotifCnt + 1 == fromInteger(valueOf(MotifRelaySize)) ) begin
 			relayMotifCnt <= 0;
+			relaySequenceOn <= True;
 			relayMotifOn <= False;
 		end else begin
 			relayMotifCnt <= relayMotifCnt + 1;

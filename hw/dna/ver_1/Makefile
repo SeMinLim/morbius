@@ -1,4 +1,4 @@
-LIBPATH=../../../../bluespecpcie
+LIBPATH=../../
 BOARD=vc707
 BUILDTOOLS=$(LIBPATH)/buildtools/
 
