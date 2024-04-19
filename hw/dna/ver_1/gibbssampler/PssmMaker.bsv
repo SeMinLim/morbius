@@ -17,12 +17,14 @@ typedef 2048 SeqSize;
 typedef TMul#(SeqNum, SeqSize) DataSize;
 // Motifs
 typedef 16 MotifLength;
+typedef TMul#(MotifLength, 2) MotifSize;
 typedef 64 PeNumMotif;
+typedef TMul#(MotifSize, PeNumMotif) MotifRelayLength;
 typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize; // 512
 
 
 interface PssmMakerIfc;
-	method Action putMotif(Bit#(SeqSize) m);
+	method Action putMotif(Bit#(MotifRelayLength) m);
 	method Action putStartPe(Bit#(32) s);
 	method ActionValue#(Vector#(MotifLength, Vector#(4, Bit#(32)))) get;
 endinterface
@@ -42,7 +44,7 @@ module mkPssmMaker(PssmMakerIfc); // 570 cycles
 	Vector#(MotifLength, UINTtoFLOATIfc) typeConverterTotal <- replicateM(mkUINTtoFLOAT);
 
 	// I/O
-	FIFO#(Bit#(SeqSize)) motifQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
+	FIFO#(Bit#(MotifRelayLength)) motifQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
 	FIFO#(Bit#(32)) startPeQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
 	FIFO#(Vector#(MotifLength, Vector#(4, Bit#(32)))) pssmQ <- mkFIFO;
 	//--------------------------------------------------------------------------------------------
@@ -118,7 +120,7 @@ module mkPssmMaker(PssmMakerIfc); // 570 cycles
 	endrule
 
 
-	method Action putMotif(Bit#(SeqSize) m);
+	method Action putMotif(Bit#(MotifRelayLength) m);
 		motifQ.enq(m);
 	endmethod
 	method Action putStartPe(Bit#(32) s);

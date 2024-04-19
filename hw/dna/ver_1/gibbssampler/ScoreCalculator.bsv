@@ -54,7 +54,7 @@ module mkScoreCalculator(ScoreCalculatorIfc);
 	//--------------------------------------------------------------------------------------------
 	// Pick the most frequent letter at each motif position
 	//--------------------------------------------------------------------------------------------
-	FIFO#(Bit#(2048)) motifQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
+	FIFO#(Bit#(MotifRelayLength)) motifQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
 	FIFO#(Vector#(MotifLength, Vector#(4, Bit#(32)))) baseQ <- mkFIFO;
 	Reg#(Vector#(MotifLength, Vector#(4, Bit#(32)))) baseR <- mkReg(replicate(replicate(0)));
 	Reg#(Bit#(32)) pickLetterCnt <- mkReg(0);
