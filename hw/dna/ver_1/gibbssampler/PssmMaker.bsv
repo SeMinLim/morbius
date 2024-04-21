@@ -18,9 +18,9 @@ typedef TMul#(SeqNum, SeqSize) DataSize;
 // Motifs
 typedef 16 MotifLength;
 typedef TMul#(MotifLength, 2) MotifSize;
-typedef 64 PeNumMotif;
+typedef 16 PeNumMotif;
 typedef TMul#(MotifSize, PeNumMotif) MotifRelayLength;
-typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize; // 512
+typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize; // 2048
 
 
 interface PssmMakerIfc;
@@ -29,7 +29,7 @@ interface PssmMakerIfc;
 	method ActionValue#(Vector#(MotifLength, Vector#(4, Bit#(32)))) get;
 endinterface
 (* synthesize *)
-module mkPssmMaker(PssmMakerIfc); // 570 cycles
+module mkPssmMaker(PssmMakerIfc); // 2106 cycles
 	// Cycle Counter
 	Reg#(Bit#(32)) cycleCount <- mkReg(0);
 	rule incCycleCounter;
@@ -53,7 +53,7 @@ module mkPssmMaker(PssmMakerIfc); // 570 cycles
 	FIFO#(Vector#(MotifLength, Vector#(4, Bit#(32)))) baseQ <- mkFIFO;
 	Reg#(Vector#(MotifLength, Vector#(4, Bit#(32)))) baseR <- mkReg(replicate(replicate(1)));
 	Reg#(Bit#(32)) makePssmCnt <- mkReg(0);
-	rule makePssm1; // 512 cycles
+	rule makePssm1; // 2048 cycles
 		motifQ.deq;
 		startPeQ.deq;
 		let motif = motifQ.first;

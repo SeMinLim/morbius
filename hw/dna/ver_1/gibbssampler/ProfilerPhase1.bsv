@@ -16,21 +16,19 @@ typedef 2048 SeqStoredSize;
 typedef TMul#(SeqLength, 2) SeqSize;
 // Motifs
 typedef 16 MotifLength;
-typedef 32 PeNumProfiler;
+typedef 8 PeNumProfiler;
 // Pipeline to get probabilities
 typedef TDiv#(16, 2) CalProbPipe1; 	     // 8
 typedef TDiv#(CalProbPipe1, 2) CalProbPipe2; // 4
 typedef TDiv#(CalProbPipe2, 2) CalProbPipe3; // 2
 // Pipeline to get sum of probabilities
-typedef TDiv#(PeNumProfiler, 2) SumProbPipe1;// 16
-typedef TDiv#(SumProbPipe1, 2) SumProbPipe2; // 8
-typedef TDiv#(SumProbPipe2, 2) SumProbPipe3; // 4
-typedef TDiv#(SumProbPipe3, 2) SumProbPipe4; // 2
+typedef TDiv#(PeNumProfiler, 2) SumProbPipe1;// 4
+typedef TDiv#(SumProbPipe1, 2) SumProbPipe2; // 2
 // Probabilities
 typedef TSub#(SeqLength, MotifLength) ProbSizeTmp;
 typedef TAdd#(ProbSizeTmp, 1) ProbSize; // 985
-typedef 31 IterCnt; // (ProbSize / PeNumProfiler) + 1
-typedef 25 RmndCnt; // ProbSize % PeNumProfiler
+typedef 124 IterCnt; // (ProbSize / PeNumProfiler) + 1
+typedef 7 RmndCnt; // ProbSize % PeNumProfiler
 
 
 interface ProfilerPhase1Ifc;
@@ -58,9 +56,7 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 	Vector#(PeNumProfiler, FpPairIfc#(32)) fpAdd <- replicateM(mkFpAdd32);
 	Vector#(SumProbPipe1, FpPairIfc#(32)) fpAddStage1 <- replicateM(mkFpAdd32);
 	Vector#(SumProbPipe2, FpPairIfc#(32)) fpAddStage2 <- replicateM(mkFpAdd32);
-	Vector#(SumProbPipe3, FpPairIfc#(32)) fpAddStage3 <- replicateM(mkFpAdd32);
-	Vector#(SumProbPipe4, FpPairIfc#(32)) fpAddStage4 <- replicateM(mkFpAdd32);
-	FpPairIfc#(32) fpAddStage5 <- mkFpAdd32;
+	FpPairIfc#(32) fpAddStage3 <- mkFpAdd32;
 
         // Profiler Phase1 I/O
 	FIFO#(Bit#(SeqSize)) sequenceQ <- mkSizedBRAMFIFO(valueOf(IterCnt));
@@ -225,33 +221,11 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 			fpAddStage2[i].deq;
 			s[i] = fpAddStage2[i].first;
 		end
-
-		for ( Integer i = 0; i < valueOf(SumProbPipe3); i = i + 1 ) begin
-			fpAddStage3[i].enq(s[i*2], s[i*2+1]);
-		end
+		fpAddStage3.enq(s[0], s[1]);
 	endrule
 	rule getSum4;
-		Vector#(SumProbPipe3, Bit#(32)) s = replicate(0);
-		for ( Integer i = 0; i < valueOf(SumProbPipe3); i = i + 1 ) begin
-			fpAddStage3[i].deq;
-			s[i] = fpAddStage3[i].first;
-		end
-
-		for ( Integer i = 0; i < valueOf(SumProbPipe4); i = i + 1 ) begin
-			fpAddStage4[i].enq(s[i*2], s[i*2+1]);
-		end
-	endrule
-	rule getSum5;
-		Vector#(SumProbPipe4, Bit#(32)) s = replicate(0);
-		for ( Integer i = 0; i < valueOf(SumProbPipe4); i = i + 1 ) begin
-			fpAddStage4[i].deq;
-			s[i] = fpAddStage4[i].first;
-		end
-		fpAddStage5.enq(s[0], s[1]);
-	endrule
-	rule getSum6;
-		fpAddStage5.deq;
-		sumQ.enq(fpAddStage5.first);
+		fpAddStage3.deq;
+		sumQ.enq(fpAddStage3.first);
 		$write("\033[1;33mCycle %1d -> \033[1;33m[ProfilerPhase1]: \033[0m: Finished!\n", cycleCount);
 	endrule
 

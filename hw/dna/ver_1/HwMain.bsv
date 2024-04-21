@@ -25,7 +25,7 @@ typedef TMul#(SeqNum, SeqStoredSize) DataSize;
 // Motifs
 typedef 16 MotifLength;
 typedef TMul#(MotifLength, 2) MotifSize;
-typedef 64 PeNumMotif;
+typedef 16 PeNumMotif;
 typedef TMul#(SeqNum, MotifSize) DataMotifSize;
 typedef TMul#(MotifSize, PeNumMotif) MotifRelayLength;
 typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize;
@@ -71,8 +71,6 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 	Reg#(Bool) dramWriteOn <- mkReg(False);
 	Reg#(Bool) dramReadSeqOn <- mkReg(True);
 	Reg#(Bool) dramReadMtfOn <- mkReg(False);
-	Reg#(Bool) relaySequenceOn <- mkReg(True);
-	Reg#(Bool) relayMotifOn <- mkReg(False);
 
 	// GibbsSampler
 	GibbsSamplerIfc gibbsSampler <- mkGibbsSampler;
@@ -192,7 +190,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 			$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: Burst DRAM read started! [MTF]\n", cycleCount);
 		end else begin
 			let d <- dramArbiter.users[0].read;
-			deserializer512b2048b.put(d);
+			gibbsSampler.putMotif(d);
 			if ( dramReadMtfCnt == fromInteger(valueOf(DramReadMtfSize)) ) begin
 				dramReadMtfCnt <= 0;
 				dramReadMtfOn <= False;
@@ -206,25 +204,8 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 	//--------------------------------------------------------------------------------------------
 	// Relay a sequence to GibbsSampler
 	//--------------------------------------------------------------------------------------------
-	rule relaySequence( relaySequenceOn );
+	rule relaySequence;
 		let s <- deserializer512b2048b.get;
 		gibbsSampler.putSequence(truncate(s));
-		relaySequenceOn <= False;
-		relayMotifOn <= True;
-	endrule
-	//--------------------------------------------------------------------------------------------
-	// Relay the motifs to GibbsSampler
-	//--------------------------------------------------------------------------------------------
-	Reg#(Bit#(32)) relayMotifCnt <- mkReg(0);
-	rule relayMotif( relayMotifOn );
-		let m <- deserializer512b2048b.get;
-		gibbsSampler.putMotif(m);
-		if ( relayMotifCnt + 1 == fromInteger(valueOf(MotifRelaySize)) ) begin
-			relayMotifCnt <= 0;
-			relaySequenceOn <= True;
-			relayMotifOn <= False;
-		end else begin
-			relayMotifCnt <= relayMotifCnt + 1;
-		end
 	endrule
 endmodule

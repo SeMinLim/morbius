@@ -14,7 +14,7 @@ typedef TMul#(SeqLength, 2) SeqSize;
 // Motif
 typedef 16 MotifLength;
 typedef TMul#(MotifLength, 2) MotifSize;
-typedef 64 PeNumMotif;
+typedef 16 PeNumMotif;
 typedef TMul#(MotifSize, PeNumMotif) MotifRelayLength;
 typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize;
 
@@ -58,7 +58,7 @@ module mkScoreCalculator(ScoreCalculatorIfc);
 	FIFO#(Vector#(MotifLength, Vector#(4, Bit#(32)))) baseQ <- mkFIFO;
 	Reg#(Vector#(MotifLength, Vector#(4, Bit#(32)))) baseR <- mkReg(replicate(replicate(0)));
 	Reg#(Bit#(32)) pickLetterCnt <- mkReg(0);
-	rule pickLetter1( !changeMotifOn ); // 511 cycles + 1 cycle
+	rule pickLetter1( !changeMotifOn ); // 2047 cycles + 1 cycle
 		motifUnchangedQ.deq;
 		let m = motifUnchangedQ.first;
 
@@ -113,7 +113,7 @@ module mkScoreCalculator(ScoreCalculatorIfc);
 	Reg#(Bit#(32)) scoreR <- mkReg(0);
 	Reg#(Bit#(1)) getScoreCnt1 <- mkReg(0);
 	Reg#(Bit#(32)) getScoreCnt2 <- mkReg(0);
-	rule getScore; // 512 cycles
+	rule getScore; // 2048 cycles
 		motifQ.deq;
 		let m = motifQ.first;
 

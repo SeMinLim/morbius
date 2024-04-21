@@ -18,12 +18,12 @@ typedef 2048 SeqStoredSize;
 typedef TMul#(SeqLength, 2) SeqSize;
 // Motifs
 typedef 16 MotifLength;
-typedef 32 PeNumProfiler;
+typedef 8 PeNumProfiler;
 // Probabilities
 typedef TSub#(SeqLength, MotifLength) ProbSizeTmp;
 typedef TAdd#(ProbSizeTmp, 1) ProbSize; // 985
-typedef 31 IterCnt; // (ProbSize / PeNumProfiler) + 1
-typedef 25 RmndCnt; // ProbSize % PeNumProfiler
+typedef 124 IterCnt; // (ProbSize / PeNumProfiler) + 1
+typedef 7 RmndCnt; // ProbSize % PeNumProfiler
 
 
 interface ProfilerPhase2Ifc;
@@ -98,4 +98,3 @@ module mkProfilerPhase2(ProfilerPhase2Ifc);
               	return resultQ.first;
         endmethod
 endmodule
-
