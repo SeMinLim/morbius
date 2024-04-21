@@ -8,12 +8,8 @@
 #include <time.h>
 
 
-#define POLY_MASK_32 0xB4BCD35C
-#define POLY_MASK_31 0x7A5BC2E3
-
-
 // Parameter setting
-#define SEQNUM 32768
+#define SEQNUM 131072
 #define SEQLENGTH 1000
 #define MOTIFLENGTH 16
 #define NUMSEEDS 3
