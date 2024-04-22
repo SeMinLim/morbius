@@ -15,7 +15,7 @@ import Serializer::*;
 import GibbsSampler::*;
 
 
-// Dataset 1
+// Dataset 2
 // Sequences
 typedef 65536 SeqNum;
 typedef 1000 SeqLength;
