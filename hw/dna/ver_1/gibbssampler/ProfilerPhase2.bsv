@@ -39,17 +39,22 @@ module mkProfilerPhase2(ProfilerPhase2Ifc);
 
 	// FpOp
 	FpPairIfc#(32) fpDiv <- mkFpDiv32;
+	FpPairIfc#(32) fpAdd <- mkFpAdd32;
 	FpPairIfc#(32) fpSub <- mkFpSub32;
 
         // Profiler Phase2 I/O
-	FIFO#(Bit#(2000)) sequenceQ <- mkFIFO;
+	FIFO#(Bit#(SeqSize)) sequenceQ <- mkFIFO;
+	Reg#(Bit#(SeqSize)) sequenceR <- mkReg(0);
 	FIFO#(Vector#(PeNumProfiler, Bit#(32))) probQ <- mkSizedBRAMFIFO(valueOf(IterCnt));
+	Reg#(Vector#(PeNumProfiler, Bit#(32))) probR <- mkReg(replicate(0));
 	FIFO#(Bit#(32)) sumQ <- mkFIFO;
+	Reg#(Bit#(32)) sumR <- mkReg(0);
 	FIFO#(Bit#(32)) resultQ <- mkFIFO;
        
 	// Generate a random value between 0.0 and 1.0 
 	Reg#(Bool) genRandNumOn <- mkReg(True);
 	FIFO#(Bit#(32)) randNumQ <- mkFIFO;
+	Reg#(Bit#(32)) randNumR <- mkReg(0);
 	rule genRandNum1( genRandNumOn );
 		fpRndNumGenerator.req;
 	endrule
@@ -59,28 +64,125 @@ module mkProfilerPhase2(ProfilerPhase2Ifc);
 		genRandNumOn <= False;
 	endrule
 
-	rule getPartialSum; // 29 cycle
-		probQ.deq;
-		sumQ.deq;
-		let p = probQ.first;
-		let s = sumQ.first;
-		fpDiv.enq(p[0], s);
+	FIFO#(Bit#(32)) partialSumTmpQ <- mkFIFO;
+	FIFO#(Bit#(32)) partialSumQ <- mkSizedBRAMFIFO(valueOf(ProbSize));
+	Reg#(Bool) getPartialSum1On <- mkReg(True);
+	Reg#(Bool) getPartialSum2On <- mkReg(False);
+	Reg#(Bit#(32)) getPartialSumCnt1 <- mkReg(0);
+	Reg#(Bit#(32)) getPartialSumCnt2 <- mkReg(0);
+	rule getPartialSum1( getPartialSum1On );
+		if ( getPartialSumCnt1 == 0 ) begin
+			probQ.deq;
+			let p = probQ.first;
+			fpAdd.enq(p[0], p[1]);
+			partialSumQ.enq(p[0]);
+			probR <= p;
+			getPartialSumCnt1 <= getPartialSumCnt1 + 1;
+		end else begin
+			partialSumTmpQ.deq;
+			let ps = partialSumTmpQ.first;
+			let p = probR;
+			let idx = getPartialSumCnt1 + 1;
+			fpAdd.enq(ps, p[idx]);
+			if ( getPartialSumCnt2 + 1 == fromInteger(valueOf(IterCnt)) ) begin
+				if ( getPartialSumCnt1 + 2 == fromInteger(valueOf(RmndCnt)) ) begin
+					getPartialSumCnt1 <= 0;
+					getPartialSumCnt2 <= 0;
+				end else begin
+					getPartialSumCnt1 <= getPartialSumCnt1 + 1;
+				end
+			end else begin
+				if ( getPartialSumCnt1 + 2 == fromInteger(valueOf(PeNumProfiler)) ) begin
+					getPartialSumCnt1 <= 0;
+					getPartialSumCnt2 <= getPartialSumCnt2 + 1;
+				end else begin
+					getPartialSumCnt1 <= getPartialSumCnt1 + 1;
+				end
+			end
+		end
+		getPartialSum1On <= False;
+		getPartialSum2On <= True;
+	endrule
+	rule getPartialSum2( getPartialSum2On );
+		fpAdd.deq;
+		let ps = fpAdd.first;
+		partialSumTmpQ.enq(ps);
+		partialSumQ.enq(ps);
+		getPartialSum1On <= True;
+		getPartialSum2On <= False;
 	endrule
 
-	rule pickRandPosition; // 12 cycle
-		randNumQ.deq;
-		fpDiv.deq;
-		let d = fpDiv.first;
-		let r = randNumQ.first;
-		fpSub.enq(d, r);
+	Reg#(Bit#(32)) divCnt <- mkReg(0);
+	rule divPartialByTotal; // 29 cycle
+		if ( divCnt == 0 ) begin
+			partialSumQ.deq;
+			sumQ.deq;
+			let p = partialSumQ.first;
+			let s = sumQ.first;
+			fpDiv.enq(p, s);
+			sumR <= s;
+			divCnt <= divCnt + 1;
+		end else begin
+			partialSumQ.deq;
+			let p = partialSumQ.first;
+			let s = sumR;
+			fpDiv.enq(p, s);
+			if ( divCnt + 1 == fromInteger(valueOf(ProbSize)) ) begin
+				divCnt <= 0;
+			end else begin
+				divCnt <= divCnt + 1;
+			end
+		end	
 	endrule
 
-	rule phase25; // 1 cycle
-		fpSub.deq;
-		sequenceQ.deq;
-		let s = sequenceQ.first;
-		Bit#(32) updatedMotif = truncate(s);
-		resultQ.enq(updatedMotif);
+	Reg#(Bit#(32)) cmprCnt <- mkReg(0);
+	rule cmprWithRandNum; // 12 cycle
+		if ( cmprCnt == 0 ) begin
+			randNumQ.deq;
+			fpDiv.deq;
+			let r = randNumQ.first;
+			let d = fpDiv.first;
+			fpSub.enq(d, r);
+			randNumR <= r;
+			cmprCnt <= cmprCnt + 1;
+		end else begin
+			fpDiv.deq;
+			let r = randNumR;
+			let d = fpDiv.first;
+			fpSub.enq(d, r);
+			if ( cmprCnt + 1 == fromInteger(valueOf(ProbSize)) ) begin
+				cmprCnt <= 0;
+			end else begin
+				cmprCnt <= cmprCnt + 1;
+			end
+		end
+	endrule
+
+	Reg#(Bit#(32)) pickCnt <- mkReg(0);
+	rule pickMotif; // 1 cycle
+		if ( pickCnt == 0 ) begin
+			sequenceQ.deq;
+			fpSub.deq;
+			let s = sequenceQ.first;
+			let f = fpSub.first;
+			if ( f[31] == 0 ) begin
+				Bit#(32) motif = truncate(s >> pickCnt);
+				resultQ.enq(motif);
+			end else begin
+				sequenceR <= s;
+				pickCnt <= pickCnt + 1;
+			end
+		end else begin
+			fpSub.deq;
+			let s = sequenceR;
+			let f = fpSub.first;
+			if ( f[31] == 0 ) begin
+				Bit#(32) motif = truncate(s >> pickCnt);
+				resultQ.enq(motif);
+			end else begin
+				pickCnt <= pickCnt + 1;
+			end
+		end
 	endrule
 
 

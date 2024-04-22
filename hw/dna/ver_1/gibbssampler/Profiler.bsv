@@ -104,7 +104,7 @@ module mkProfiler(ProfilerIfc);
 		profilerPhase2.putSum(s);
 	endrule
 
-	rule getResult; // 42 + 1 cycles
+	rule getResult; // 42 x 296 + 1 cycles
 		let r <- profilerPhase2.get;
 		resultQ.enq(r);
 	endrule

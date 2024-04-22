@@ -29,7 +29,7 @@ interface GibbsSamplerIfc;
 	method Action putMotif(Bit#(MotifRelayLength) m);
 endinterface
 (* synthesize *)
-module mkGibbsSampler(GibbsSamplerIfc); // 7690 cycles
+module mkGibbsSampler(GibbsSamplerIfc); // 20080 cycles
 	// Cycle Counter
 	Reg#(Bit#(32)) cycleCount <- mkReg(0);
 	rule incCycleCounter;
@@ -80,7 +80,7 @@ module mkGibbsSampler(GibbsSamplerIfc); // 7690 cycles
 		profiler.putPssm(p);
 	endrule
 
-	rule calScore; // 3531 + 1 cycles
+	rule calScore; // 15921  + 1 cycles
 		let m <- profiler.get;
 		scoreCalculator.putMotifChanged(m);
 	endrule

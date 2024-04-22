@@ -16,7 +16,7 @@ typedef 16 MotifLength;
 typedef TMul#(MotifLength, 2) MotifSize;
 typedef 16 PeNumMotif;
 typedef TMul#(MotifSize, PeNumMotif) MotifRelayLength;
-typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize;
+typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize; // 2048
 
 
 interface ScoreCalculatorIfc;
@@ -25,7 +25,7 @@ interface ScoreCalculatorIfc;
 	method ActionValue#(Bit#(32)) get;
 endinterface
 (* synthesize *)
-module mkScoreCalculator(ScoreCalculatorIfc);
+module mkScoreCalculator(ScoreCalculatorIfc); // 2048 + 2 cycles
 	// I/O
 	FIFO#(Bit#(MotifRelayLength)) motifUnchangedQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
 	FIFO#(Bit#(32)) motifChangedQ <- mkFIFO;
