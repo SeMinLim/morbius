@@ -9,13 +9,13 @@
 
 // For dataset 1
 #define DATASETNUM 32768
-#define DATASETLENGTH 1000
+#define DATASETLENGTH 300
 // For dataset 2
 //#define DATASETNUM 65536
-//#define DATASETLENGTH 1000
+//#define DATASETLENGTH 300
 // For dataset 3
 //#define DATASETNUM 131072
-//#define DATASETLENGTH 1000
+//#define DATASETLENGTH 300
 
 
 // Main
