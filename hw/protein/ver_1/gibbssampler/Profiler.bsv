@@ -20,6 +20,7 @@ typedef 300 SeqLength;
 typedef TMul#(SeqLength, 5) SeqSize;
 // Motifs
 typedef 16 MotifLength;
+typedef TMul#(MotifLength, 5) MotifSize;
 typedef 8 PeNumProfiler;
 // Probabilities
 typedef TSub#(SeqLength, MotifLength) ProbSizeTmp;
@@ -31,7 +32,7 @@ typedef 3 RmndCnt; 					// ProbSize % PeNumProfiler
 interface ProfilerIfc;
         method Action putSequence(Bit#(SeqSize) s);
 	method Action putPssm(Vector#(MotifLength, Vector#(20, Bit#(32))) p);
-        method ActionValue#(Bit#(32)) get;
+        method ActionValue#(Bit#(MotifSize)) get;
 endinterface
 (* synthesize *)
 module mkProfiler(ProfilerIfc);
@@ -49,7 +50,7 @@ module mkProfiler(ProfilerIfc);
 	Reg#(Bit#(SeqSize)) sequenceR <- mkReg(0);
 	FIFO#(Vector#(MotifLength, Vector#(20, Bit#(32)))) pssmQ <- mkFIFO;
 	Reg#(Vector#(MotifLength, Vector#(20, Bit#(32)))) pssmR <- mkReg(replicate(replicate(0)));
-	FIFO#(Bit#(32)) resultQ <- mkFIFO;
+	FIFO#(Bit#(MotifSize)) resultQ <- mkFIFO;
 
 	Reg#(Bit#(32)) relaySeqCnt <- mkReg(0);
 	rule relaySequence;
@@ -115,7 +116,7 @@ module mkProfiler(ProfilerIfc);
 	method Action putPssm(Vector#(MotifLength, Vector#(20, Bit#(32))) p);
 		pssmQ.enq(p);
 	endmethod
-        method ActionValue#(Bit#(32)) get;
+        method ActionValue#(Bit#(MotifSize)) get;
 		resultQ.deq;
               	return resultQ.first;
         endmethod

@@ -188,7 +188,7 @@ module mkScoreCalculator(ScoreCalculatorIfc); // 2048 + 2 cycles
 				pattern[i] = 5'b01111;
 			end else if ( (base[i][16] >= base[i][17]) && (base[i][16] >= base[i][18]) && (base[i][16] >= base[i][19]) ) begin
 				pattern[i] = 5'b10000;
-			end else if ( (base[i][17] >= base[i][18]) && (base[i][17] >= base[19]) ) begin
+			end else if ( (base[i][17] >= base[i][18]) && (base[i][17] >= base[i][19]) ) begin
 				pattern[i] = 5'b10001;
 			end else if ( (base[i][18] >= base[i][19]) ) begin
 				pattern[i] = 5'b10010;

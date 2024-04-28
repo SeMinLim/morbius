@@ -17,6 +17,7 @@ typedef 300 SeqLength;
 typedef TMul#(SeqLength, 5) SeqSize;
 // Motifs
 typedef 16 MotifLength;
+typedef TMul#(MotifLength, 5) MotifSize;
 typedef 8 PeNumProfiler;
 // Probabilities
 typedef TSub#(SeqLength, MotifLength) ProbSizeTmp;
@@ -29,7 +30,7 @@ interface ProfilerPhase2Ifc;
         method Action putSequence(Bit#(SeqSize) s);
 	method Action putProb(Vector#(PeNumProfiler, Bit#(32)) p);
         method Action putSum(Bit#(32) s);
-	method ActionValue#(Bit#(32)) get;
+	method ActionValue#(Bit#(MotifSize)) get;
 endinterface
 (* synthesize *)
 module mkProfilerPhase2(ProfilerPhase2Ifc);
@@ -48,7 +49,7 @@ module mkProfilerPhase2(ProfilerPhase2Ifc);
 	Reg#(Vector#(PeNumProfiler, Bit#(32))) probR <- mkReg(replicate(0));
 	FIFO#(Bit#(32)) sumQ <- mkFIFO;
 	Reg#(Bit#(32)) sumR <- mkReg(0);
-	FIFO#(Bit#(32)) resultQ <- mkFIFO;
+	FIFO#(Bit#(MotifSize)) resultQ <- mkFIFO;
        
 	// Generate a random value between 0.0 and 1.0 
 	Reg#(Bool) genRandNumOn <- mkReg(True);
@@ -165,7 +166,7 @@ module mkProfilerPhase2(ProfilerPhase2Ifc);
 			let s = sequenceQ.first;
 			let f = fpSub.first;
 			if ( f[31] == 0 ) begin
-				Bit#(32) motif = truncate(s >> pickCnt);
+				Bit#(MotifSize) motif = truncate(s >> pickCnt);
 				resultQ.enq(motif);
 			end else begin
 				sequenceR <= s;
@@ -176,7 +177,7 @@ module mkProfilerPhase2(ProfilerPhase2Ifc);
 			let s = sequenceR;
 			let f = fpSub.first;
 			if ( f[31] == 0 ) begin
-				Bit#(32) motif = truncate(s >> pickCnt);
+				Bit#(MotifSize) motif = truncate(s >> pickCnt);
 				resultQ.enq(motif);
 			end else begin
 				pickCnt <= pickCnt + 1;
@@ -194,7 +195,7 @@ module mkProfilerPhase2(ProfilerPhase2Ifc);
 	method Action putSum(Bit#(32) s);
 		sumQ.enq(s);
 	endmethod
-        method ActionValue#(Bit#(32)) get;
+        method ActionValue#(Bit#(MotifSize)) get;
 		resultQ.deq;
               	return resultQ.first;
         endmethod

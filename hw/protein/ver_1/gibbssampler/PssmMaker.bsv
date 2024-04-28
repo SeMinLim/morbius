@@ -59,7 +59,7 @@ module mkPssmMaker(PssmMakerIfc); // 2106 cycles
 		Vector#(MotifLength, Vector#(20, Bit#(32))) base = baseR;
 		for ( Bit#(32) i = 0; i < fromInteger(valueOf(PeNumMotif)); i = i + 1 ) begin
 			if ( i >= startPe ) begin
-				Bit#(MotifSize) m = truncate(motif >> (i * valueOf(MotifSize)));
+				Bit#(MotifSize) m = truncate(motif >> (i * fromInteger(valueOf(MotifSize))));
 				for ( Bit#(32) j = 0; j < fromInteger(valueOf(MotifLength)); j = j + 1 ) begin
 					Bit#(5) c = truncate(m >> (j * 5));
 					if ( c == 5'b00000 ) base[j][0] = base[j][0] + 1;

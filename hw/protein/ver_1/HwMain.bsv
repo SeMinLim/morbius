@@ -208,7 +208,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 		end
 	endrule
 	FIFO#(Bit#(512)) dramFitterMtfQ <- mkSizedBRAMFIFO(valueOf(ForDramFitterMtf));
-	Reg#(Bit#(1536)) dramFitterMtfR <- mkReg(0);
+	Reg#(Bit#(MotifRelayLength)) dramFitterMtfR <- mkReg(0);
 	Reg#(Bit#(32)) dramFitterMtfCnt <- mkReg(0);
 	rule dramFitterMtf;
 		if ( dramFitterMtfCnt == 0 ) begin
@@ -234,7 +234,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 	Reg#(Bit#(32)) dramWriteSeqCnt <- mkReg(0);
 	rule dramWriterSeq( dramWriteSeqOn );
 		if ( dramWriteSeqCnt == 0 ) begin
-			dramArbiter.users[0].cmd(DramSeqAddrStart, fromInteger(valueOf(DramWriteSeqSize)), True);
+			dramArbiter.users[0].cmd(fromInteger(valueOf(DramSeqAddrStart)), fromInteger(valueOf(DramWriteSeqSize)), True);
 			dramWriteSeqCnt <= dramWriteSeqCnt + 1;
 			$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: DRAM write started! [SEQ]\n", cycleCount);
 		end else begin
@@ -253,7 +253,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram)
 	Reg#(Bit#(32)) dramWriteMtfCnt <- mkReg(0);
 	rule dramWriterMtf( dramWriteMtfOn );
 		if ( dramWriteMtfCnt == 0 ) begin
-			dramArbiter.users[0].cmd(DramMtfAddrStart, fromInteger(valueOf(DramWriteMtfSize)), True);
+			dramArbiter.users[0].cmd(fromInteger(valueOf(DramMtfAddrStart)), fromInteger(valueOf(DramWriteMtfSize)), True);
 			dramWriteMtfCnt <= dramWriteMtfCnt + 1;
 			$write("\033[1;33mCycle %1d -> \033[1;33m[HwMain]: \033[0m: DRAM write started! [MTF]\n", cycleCount);
 		end else begin
