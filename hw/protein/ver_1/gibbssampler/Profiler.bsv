@@ -16,22 +16,21 @@ import ProfilerPhase2::*;
 
 // Sequences
 typedef 32768 SeqNum;
-typedef 1000 SeqLength;
-typedef 2048 SeqStoredSize;
-typedef TMul#(SeqLength, 2) SeqSize;
+typedef 300 SeqLength;
+typedef TMul#(SeqLength, 5) SeqSize;
 // Motifs
 typedef 16 MotifLength;
 typedef 8 PeNumProfiler;
 // Probabilities
 typedef TSub#(SeqLength, MotifLength) ProbSizeTmp;
-typedef TAdd#(ProbSizeTmp, 1) ProbSize; // 985
-typedef 124 IterCnt; // (ProbSize / PeNum) + 1
-typedef 7 RmndCnt; // ProbSize % PeNum
+typedef TAdd#(ProbSizeTmp, 1) ProbSize; 		// 285
+typedef 36 IterCnt; 					// (ProbSize / PeNumProfiler) + 1
+typedef 3 RmndCnt; 					// ProbSize % PeNumProfiler
 
 
 interface ProfilerIfc;
         method Action putSequence(Bit#(SeqSize) s);
-	method Action putPssm(Vector#(MotifLength, Vector#(4, Bit#(32))) p);
+	method Action putPssm(Vector#(MotifLength, Vector#(20, Bit#(32))) p);
         method ActionValue#(Bit#(32)) get;
 endinterface
 (* synthesize *)
@@ -48,8 +47,8 @@ module mkProfiler(ProfilerIfc);
         // Profiler I/O
 	FIFO#(Bit#(SeqSize)) sequenceQ <- mkFIFO;
 	Reg#(Bit#(SeqSize)) sequenceR <- mkReg(0);
-	FIFO#(Vector#(MotifLength, Vector#(4, Bit#(32)))) pssmQ <- mkFIFO;
-	Reg#(Vector#(MotifLength, Vector#(4, Bit#(32)))) pssmR <- mkReg(replicate(replicate(0)));
+	FIFO#(Vector#(MotifLength, Vector#(20, Bit#(32)))) pssmQ <- mkFIFO;
+	Reg#(Vector#(MotifLength, Vector#(20, Bit#(32)))) pssmR <- mkReg(replicate(replicate(0)));
 	FIFO#(Bit#(32)) resultQ <- mkFIFO;
 
 	Reg#(Bit#(32)) relaySeqCnt <- mkReg(0);
@@ -99,7 +98,7 @@ module mkProfiler(ProfilerIfc);
 		profilerPhase2.putProb(p);
 	endrule
 
-	rule getSum; // 3487 + 1 cycles
+	rule getSum; // 1023 + 1 cycles
 		let s <- profilerPhase1.getSum;
 		profilerPhase2.putSum(s);
 	endrule
@@ -113,7 +112,7 @@ module mkProfiler(ProfilerIfc);
 	method Action putSequence(Bit#(SeqSize) s);
                 sequenceQ.enq(s);
 	endmethod
-	method Action putPssm(Vector#(MotifLength, Vector#(4, Bit#(32))) p);
+	method Action putPssm(Vector#(MotifLength, Vector#(20, Bit#(32))) p);
 		pssmQ.enq(p);
 	endmethod
         method ActionValue#(Bit#(32)) get;

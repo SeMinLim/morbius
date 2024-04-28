@@ -12,13 +12,11 @@ import Profiler::*;
 
 // Sequences
 typedef 32768 SeqNum;
-typedef 1000 SeqLength;
-typedef 2048 SeqStoredSize;
-typedef TMul#(SeqLength, 2) SeqSize;
-typedef TMul#(SeqNum, SeqStoredSize) DataSize;
+typedef 300 SeqLength;
+typedef TMul#(SeqLength, 5) SeqSize;
 // Motifs
 typedef 16 MotifLength;
-typedef TMul#(MotifLength, 2) MotifSize;
+typedef TMul#(MotifLength, 5) MotifSize;
 typedef 16 PeNumMotif;
 typedef TMul#(MotifSize, PeNumMotif) MotifRelayLength;
 typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize;
@@ -29,7 +27,7 @@ interface GibbsSamplerIfc;
 	method Action putMotif(Bit#(MotifRelayLength) m);
 endinterface
 (* synthesize *)
-module mkGibbsSampler(GibbsSamplerIfc); // 20080 cycles
+module mkGibbsSampler(GibbsSamplerIfc); //  cycles
 	// Cycle Counter
 	Reg#(Bit#(32)) cycleCount <- mkReg(0);
 	rule incCycleCounter;
@@ -75,17 +73,17 @@ module mkGibbsSampler(GibbsSamplerIfc); // 20080 cycles
 		let s = sequenceQ.first;
 		profiler.putSequence(s);
 	endrule
-	rule relayPssmToProfiler; // 2106 + 1 cyckes
+	rule relayPssmToProfiler; //  + 1 cyckes
 		let p <- pssmMaker.get;
 		profiler.putPssm(p);
 	endrule
 
-	rule calScore; // 15921  + 1 cycles
+	rule calScore; //  + 1 cycles
 		let m <- profiler.get;
 		scoreCalculator.putMotifChanged(m);
 	endrule
 
-	rule getResult; // 2050 + 1 cycles 
+	rule getResult; //  + 1 cycles 
 		let s <- scoreCalculator.get;
 		$write("\033[1;33mCycle %1d -> \033[1;33m[GibbsSampler]: \033[0m: GibbsSampler finished!\n", cycleCount);
 	endrule

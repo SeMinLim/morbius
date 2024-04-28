@@ -11,29 +11,29 @@ import Float32::*;
 
 // Sequences
 typedef 32768 SeqNum;
-typedef 1000 SeqLength;
-typedef 2048 SeqStoredSize;
-typedef TMul#(SeqLength, 2) SeqSize;
+typedef 300 SeqLength;
+typedef TMul#(SeqLength, 5) SeqSize;
 // Motifs
 typedef 16 MotifLength;
+typedef TMul#(MotifLength, 5) MotifSize;
 typedef 8 PeNumProfiler;
 // Pipeline to get probabilities
-typedef TDiv#(16, 2) CalProbPipe1; 	     // 8
-typedef TDiv#(CalProbPipe1, 2) CalProbPipe2; // 4
-typedef TDiv#(CalProbPipe2, 2) CalProbPipe3; // 2
+typedef TDiv#(16, 2) CalProbPipe1; 	     		// 8
+typedef TDiv#(CalProbPipe1, 2) CalProbPipe2; 		// 4
+typedef TDiv#(CalProbPipe2, 2) CalProbPipe3; 		// 2
 // Pipeline to get sum of probabilities
-typedef TDiv#(PeNumProfiler, 2) SumProbPipe1;// 4
-typedef TDiv#(SumProbPipe1, 2) SumProbPipe2; // 2
+typedef TDiv#(PeNumProfiler, 2) SumProbPipe1;		// 4
+typedef TDiv#(SumProbPipe1, 2) SumProbPipe2; 		// 2
 // Probabilities
 typedef TSub#(SeqLength, MotifLength) ProbSizeTmp;
-typedef TAdd#(ProbSizeTmp, 1) ProbSize; // 985
-typedef 124 IterCnt; // (ProbSize / PeNumProfiler) + 1
-typedef 7 RmndCnt; // ProbSize % PeNumProfiler
+typedef TAdd#(ProbSizeTmp, 1) ProbSize; 		// 285
+typedef 36 IterCnt; 					// (ProbSize / PeNumProfiler) + 1
+typedef 3 RmndCnt; 					// ProbSize % PeNumProfiler
 
 
 interface ProfilerPhase1Ifc;
         method Action putSequence(Bit#(SeqSize) s);
-	method Action putPssm(Vector#(MotifLength, Vector#(4, Bit#(32))) p);
+	method Action putPssm(Vector#(MotifLength, Vector#(20, Bit#(32))) p);
 	method Action putPeNum(Bit#(32) n);
         method ActionValue#(Vector#(PeNumProfiler, Bit#(32))) getProb;
 	method ActionValue#(Bit#(32)) getSum;
@@ -60,7 +60,7 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 
         // Profiler Phase1 I/O
 	FIFO#(Bit#(SeqSize)) sequenceQ <- mkSizedBRAMFIFO(valueOf(IterCnt));
-	FIFO#(Vector#(MotifLength, Vector#(4, Bit#(32)))) pssmQ <- mkSizedBRAMFIFO(valueOf(IterCnt));
+	FIFO#(Vector#(MotifLength, Vector#(20, Bit#(32)))) pssmQ <- mkSizedBRAMFIFO(valueOf(IterCnt));
 	FIFO#(Bit#(32)) peCntQ <- mkSizedBRAMFIFO(valueOf(IterCnt));
 	FIFO#(Vector#(PeNumProfiler, Bit#(32))) probQ <- mkSizedBRAMFIFO(valueOf(IterCnt));
 	FIFO#(Bit#(32)) sumQ <- mkFIFO;
@@ -79,14 +79,30 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
 		Vector#(PeNumProfiler, Vector#(MotifLength, Bit#(32))) prob = replicate(replicate(0));
 		for ( Bit#(32) i = 0; i < fromInteger(valueOf(PeNumProfiler)); i = i + 1 ) begin 
 			Bit#(SeqSize) sqnc = s >> (fromInteger(valueOf(PeNumProfiler)) * getProb1Cnt);
-			Bit#(32) m = truncate(sqnc >> (i * 32));
+			Bit#(MotifSize) m = truncate(sqnc >> i);
 			if ( i < n ) begin
 				for ( Bit#(32) j = 0; j < fromInteger(valueOf(MotifLength)); j = j + 1 ) begin
-					Bit#(2) c = truncate(m >> (j * 2));
-					if ( c == 2'b00 ) prob[i][j] = p[j][0];
-					else if ( c == 2'b01 ) prob[i][j] = p[j][1];
-					else if ( c == 2'b10 ) prob[i][j] = p[j][2]; 
-					else if ( c == 2'b11 ) prob[i][j] = p[j][3];
+					Bit#(5) c = truncate(m >> (j * 5));
+					if ( c == 5'b00000 ) prob[i][j] = p[j][0];
+					else if ( c == 5'b00001 ) prob[i][j] = p[j][1];
+					else if ( c == 5'b00010 ) prob[i][j] = p[j][2]; 
+					else if ( c == 5'b00011 ) prob[i][j] = p[j][3];
+					else if ( c == 5'b00100 ) prob[i][j] = p[j][4];
+					else if ( c == 5'b00101 ) prob[i][j] = p[j][5];
+					else if ( c == 5'b00110 ) prob[i][j] = p[j][6];
+					else if ( c == 5'b00111 ) prob[i][j] = p[j][7];
+					else if ( c == 5'b01000 ) prob[i][j] = p[j][8];
+					else if ( c == 5'b01001 ) prob[i][j] = p[j][9];
+					else if ( c == 5'b01010 ) prob[i][j] = p[j][10];
+					else if ( c == 5'b01011 ) prob[i][j] = p[j][11];
+					else if ( c == 5'b01100 ) prob[i][j] = p[j][12];
+					else if ( c == 5'b01101 ) prob[i][j] = p[j][13];
+					else if ( c == 5'b01110 ) prob[i][j] = p[j][14];
+					else if ( c == 5'b01111 ) prob[i][j] = p[j][15];
+					else if ( c == 5'b10000 ) prob[i][j] = p[j][16];
+					else if ( c == 5'b10001 ) prob[i][j] = p[j][17];
+					else if ( c == 5'b10010 ) prob[i][j] = p[j][18];
+					else if ( c == 5'b10011 ) prob[i][j] = p[j][19];
 				end
 			end
 			
@@ -233,7 +249,7 @@ module mkProfilerPhase1(ProfilerPhase1Ifc);
         method Action putSequence(Bit#(SeqSize) s);
                 sequenceQ.enq(s);
 	endmethod
-	method Action putPssm(Vector#(MotifLength, Vector#(4, Bit#(32))) p);
+	method Action putPssm(Vector#(MotifLength, Vector#(20, Bit#(32))) p);
 		pssmQ.enq(p);
 	endmethod
 	method Action putPeNum(Bit#(32) n);

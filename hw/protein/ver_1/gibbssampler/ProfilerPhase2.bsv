@@ -13,17 +13,16 @@ import RandomGenerator::*;
 
 // Sequences
 typedef 32768 SeqNum;
-typedef 1000 SeqLength;
-typedef 2048 SeqStoredSize;
-typedef TMul#(SeqLength, 2) SeqSize;
+typedef 300 SeqLength;
+typedef TMul#(SeqLength, 5) SeqSize;
 // Motifs
 typedef 16 MotifLength;
 typedef 8 PeNumProfiler;
 // Probabilities
 typedef TSub#(SeqLength, MotifLength) ProbSizeTmp;
-typedef TAdd#(ProbSizeTmp, 1) ProbSize; // 985
-typedef 124 IterCnt; // (ProbSize / PeNumProfiler) + 1
-typedef 7 RmndCnt; // ProbSize % PeNumProfiler
+typedef TAdd#(ProbSizeTmp, 1) ProbSize; 		// 285
+typedef 36 IterCnt; 					// (ProbSize / PeNumProfiler) + 1
+typedef 3 RmndCnt; 					// ProbSize % PeNumProfiler
 
 
 interface ProfilerPhase2Ifc;

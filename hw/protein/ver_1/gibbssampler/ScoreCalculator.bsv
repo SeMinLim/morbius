@@ -8,27 +8,24 @@ import BRAMFIFO::*;
 
 // Sequences
 typedef 32768 SeqNum;
-typedef 1000 SeqLength;
-typedef 2048 SeqStoredSize;
-typedef TMul#(SeqLength, 2) SeqSize;
 // Motif
 typedef 16 MotifLength;
-typedef TMul#(MotifLength, 2) MotifSize;
+typedef TMul#(MotifLength, 5) MotifSize;
 typedef 16 PeNumMotif;
 typedef TMul#(MotifSize, PeNumMotif) MotifRelayLength;
-typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize; // 2048
+typedef TDiv#(SeqNum, PeNumMotif) MotifRelaySize; 	// 2048
 
 
 interface ScoreCalculatorIfc;
 	method Action putMotifUnchanged(Bit#(MotifRelayLength) m);
-	method Action putMotifChanged(Bit#(32) m);
+	method Action putMotifChanged(Bit#(MotifSize) m);
 	method ActionValue#(Bit#(32)) get;
 endinterface
 (* synthesize *)
 module mkScoreCalculator(ScoreCalculatorIfc); // 2048 + 2 cycles
 	// I/O
 	FIFO#(Bit#(MotifRelayLength)) motifUnchangedQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
-	FIFO#(Bit#(32)) motifChangedQ <- mkFIFO;
+	FIFO#(Bit#(MotifSize)) motifChangedQ <- mkFIFO;
 	FIFO#(Bit#(32)) scoreQ <- mkFIFO;
 	//--------------------------------------------------------------------------------------------
 	// Phase 1
@@ -48,29 +45,45 @@ module mkScoreCalculator(ScoreCalculatorIfc); // 2048 + 2 cycles
 		motifChangedQ.deq;
 		let t = motifTmpQ.first;
 		let m = motifChangedQ.first;
-		t[31:0] = m;
+		t[79:0] = m;
 		motifUnchangedQ.enq(t);
 	endrule
 	//--------------------------------------------------------------------------------------------
 	// Pick the most frequent letter at each motif position
 	//--------------------------------------------------------------------------------------------
 	FIFO#(Bit#(MotifRelayLength)) motifQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
-	FIFO#(Vector#(MotifLength, Vector#(4, Bit#(32)))) baseQ <- mkFIFO;
-	Reg#(Vector#(MotifLength, Vector#(4, Bit#(32)))) baseR <- mkReg(replicate(replicate(0)));
+	FIFO#(Vector#(MotifLength, Vector#(20, Bit#(32)))) baseQ <- mkFIFO;
+	Reg#(Vector#(MotifLength, Vector#(20, Bit#(32)))) baseR <- mkReg(replicate(replicate(0)));
 	Reg#(Bit#(32)) pickLetterCnt <- mkReg(0);
 	rule pickLetter1( !changeMotifOn ); // 2047 cycles + 1 cycle
 		motifUnchangedQ.deq;
 		let m = motifUnchangedQ.first;
 
-		Vector#(MotifLength, Vector#(4, Bit#(32))) base = baseR;
+		Vector#(MotifLength, Vector#(20, Bit#(32))) base = baseR;
 		for ( Integer i = 0; i < valueOf(PeNumMotif); i = i + 1 ) begin
-			Bit#(32) motif = truncate(m >> (i * 32));
+			Bit#(MotifSize) motif = truncate(m >> (i * valueOf(MotifSize)));
 			for ( Integer j = 0; j < valueOf(MotifLength); j = j + 1 ) begin
-				Bit#(2) c = truncate(motif >> (j * 2));
-				if ( c == 2'b00 ) base[j][0] = base[j][0] + 1;
-				else if ( c == 2'b01 ) base[j][1] = base[j][1] + 1;
-				else if ( c == 2'b10 ) base[j][2] = base[j][2] + 1;
-				else if ( c == 2'b11 ) base[j][3] = base[j][3] + 1;
+				Bit#(5) c = truncate(motif >> (j * 5));
+				if ( c == 5'b00000 ) base[j][0] = base[j][0] + 1;
+				else if ( c == 5'b00001 ) base[j][1] = base[j][1] + 1;
+				else if ( c == 5'b00010 ) base[j][2] = base[j][2] + 1;
+				else if ( c == 5'b00011 ) base[j][3] = base[j][3] + 1;
+				else if ( c == 5'b00100 ) base[j][4] = base[j][4] + 1;
+				else if ( c == 5'b00101 ) base[j][5] = base[j][5] + 1;
+				else if ( c == 5'b00110 ) base[j][6] = base[j][6] + 1;
+				else if ( c == 5'b00111 ) base[j][7] = base[j][7] + 1;
+				else if ( c == 5'b01000 ) base[j][8] = base[j][8] + 1;
+				else if ( c == 5'b01001 ) base[j][9] = base[j][9] + 1;
+				else if ( c == 5'b01010 ) base[j][10] = base[j][10] + 1;
+				else if ( c == 5'b01011 ) base[j][11] = base[j][11] + 1;
+				else if ( c == 5'b01100 ) base[j][12] = base[j][12] + 1;
+				else if ( c == 5'b01101 ) base[j][13] = base[j][13] + 1;
+				else if ( c == 5'b01110 ) base[j][14] = base[j][14] + 1;
+				else if ( c == 5'b01111 ) base[j][15] = base[j][15] + 1;
+				else if ( c == 5'b10000 ) base[j][16] = base[j][16] + 1;
+				else if ( c == 5'b10001 ) base[j][17] = base[j][17] + 1;
+				else if ( c == 5'b10010 ) base[j][18] = base[j][18] + 1;
+				else if ( c == 5'b10011 ) base[j][19] = base[j][19] + 1;
 			end
 		end
 
@@ -83,21 +96,104 @@ module mkScoreCalculator(ScoreCalculatorIfc); // 2048 + 2 cycles
 
 		motifQ.enq(m);
 	endrule
-	FIFO#(Vector#(MotifLength, Bit#(2))) patternQ <- mkFIFO;
+	FIFO#(Vector#(MotifLength, Bit#(5))) patternQ <- mkFIFO;
 	rule pickLetter2; // 1 cycle
 		baseQ.deq;
 		let base = baseQ.first;	
 
-		Vector#(MotifLength, Bit#(2)) pattern = replicate(0);
+		Vector#(MotifLength, Bit#(5)) pattern = replicate(0);
 		for ( Integer i = 0; i < valueOf(MotifLength); i = i + 1 ) begin
-			if ( (base[i][0] >= base[i][1]) && (base[i][0] >= base[i][2]) && (base[i][0] >= base[i][3]) ) begin
-				pattern[i] = 2'b00;
-			end else if ( (base[i][1] >= base[i][2]) && (base[i][1] >= base[i][3]) ) begin
-				pattern[i] = 2'b01;
-			end else if ( base[i][2] >= base[i][3] ) begin
-				pattern[i] = 2'b10;
+			if ( (base[i][0] >= base[i][1]) && (base[i][0] >= base[i][2]) && (base[i][0] >= base[i][3]) &&
+			     (base[i][0] >= base[i][4]) && (base[i][0] >= base[i][5]) && (base[i][0] >= base[i][6]) &&
+		     	     (base[i][0] >= base[i][7]) && (base[i][0] >= base[i][8]) && (base[i][0] >= base[i][9]) &&
+		    	     (base[i][0] >= base[i][10]) && (base[i][0] >= base[i][11]) && (base[i][0] >= base[i][12]) && 
+		     	     (base[i][0] >= base[i][13]) && (base[i][0] >= base[i][14]) && (base[i][0] >= base[i][15]) && 
+		     	     (base[i][0] >= base[i][16]) && (base[i][0] >= base[i][17]) && (base[i][0] >= base[i][18]) &&
+		     	     (base[i][0] >= base[i][19]) ) begin
+				pattern[i] = 5'b00000;
+			end else if ( (base[i][1] >= base[i][2]) && (base[i][1] >= base[i][3]) && (base[i][1] >= base[i][4]) &&
+		       		      (base[i][1] >= base[i][5]) && (base[i][1] >= base[i][6]) && (base[i][1] >= base[i][7]) &&	
+			      	      (base[i][1] >= base[i][8]) && (base[i][1] >= base[i][9]) && (base[i][1] >= base[i][10]) &&
+			      	      (base[i][1] >= base[i][11]) && (base[i][1] >= base[i][12]) && (base[i][1] >= base[i][13]) && 
+			      	      (base[i][1] >= base[i][14]) && (base[i][1] >= base[i][15]) && (base[i][1] >= base[i][16]) && 
+			      	      (base[i][1] >= base[i][17]) && (base[i][1] >= base[i][18]) && (base[i][1] >= base[i][19]) ) begin
+				pattern[i] = 5'b00001;
+			end else if ( (base[i][2] >= base[i][3]) && (base[i][2] >= base[i][4]) && (base[i][2] >= base[i][5]) && 
+				      (base[i][2] >= base[i][6]) && (base[i][2] >= base[i][7]) && (base[i][2] >= base[i][8]) &&
+			     	      (base[i][2] >= base[i][9]) && (base[i][2] >= base[i][10]) && (base[i][2] >= base[i][11]) && 
+			      	      (base[i][2] >= base[i][12]) && (base[i][2] >= base[i][13]) && (base[i][2] >= base[i][14]) && 
+			      	      (base[i][2] >= base[i][15]) && (base[i][2] >= base[i][16]) && (base[i][2] >= base[i][17]) && 
+			      	      (base[i][2] >= base[i][18]) && (base[i][2] >= base[i][19]) ) begin
+				pattern[i] = 5'b00010;
+			end else if ( (base[i][3] >= base[i][4]) && (base[i][3] >= base[i][5]) && (base[i][3] >= base[i][6]) && 
+				      (base[i][3] >= base[i][7]) && (base[i][3] >= base[i][8]) && (base[i][3] >= base[i][9]) && 
+			      	      (base[i][3] >= base[i][10]) && (base[i][3] >= base[i][11]) && (base[i][3] >= base[i][12]) && 
+			      	      (base[i][3] >= base[i][13]) && (base[i][3] >= base[i][14]) && (base[i][3] >= base[i][15]) &&
+			     	      (base[i][3] >= base[i][16]) && (base[i][3] >= base[i][17]) && (base[i][3] >= base[i][18]) && 
+			      	      (base[i][3] >= base[i][19]) ) begin
+				pattern[i] = 5'b00011;
+			end else if ( (base[i][4] >= base[i][5]) && (base[i][4] >= base[i][6]) && (base[i][4] >= base[i][7]) &&
+		        	      (base[i][4] >= base[i][8]) && (base[i][4] >= base[i][9]) && (base[i][4] >= base[i][10]) &&
+		      		      (base[i][4] >= base[i][11]) && (base[i][4] >= base[i][12]) && (base[i][4] >= base[i][13]) &&
+				      (base[i][4] >= base[i][14]) && (base[i][4] >= base[i][15]) && (base[i][4] >= base[i][16]) &&	
+			      	      (base[i][4] >= base[i][17]) && (base[i][4] >= base[i][18]) && (base[i][4] >= base[i][19]) ) begin
+				pattern[i] = 5'b00100;
+			end else if ( (base[i][5] >= base[i][6]) && (base[i][5] >= base[i][7]) && (base[i][5] >= base[i][8]) &&
+		       		      (base[i][5] >= base[i][9]) && (base[i][5] >= base[i][10]) && (base[i][5] >= base[i][11]) &&
+		      		      (base[i][5] >= base[i][12]) && (base[i][5] >= base[i][13]) && (base[i][5] >= base[i][14]) &&
+			      	      (base[i][5] >= base[i][15]) && (base[i][5] >= base[i][16]) && (base[i][5] >= base[i][17]) &&
+			      	      (base[i][5] >= base[i][18]) && (base[i][5] >= base[i][19]) ) begin
+				pattern[i] = 5'b00101;
+			end else if ( (base[i][6] >= base[i][7]) && (base[i][6] >= base[i][8]) && (base[i][6] >= base[i][9]) && 
+				      (base[i][6] >= base[i][10]) && (base[i][6] >= base[i][11]) && (base[i][6] >= base[i][12]) &&
+			      	      (base[i][6] >= base[i][13]) && (base[i][6] >= base[i][14]) && (base[i][6] >= base[i][15]) &&
+			      	      (base[i][6] >= base[i][16]) && (base[i][6] >= base[i][17]) && (base[i][6] >= base[i][18]) &&
+			      	      (base[i][6] >= base[i][19]) ) begin
+				pattern[i] = 5'b00110;
+			end else if ( (base[i][7] >= base[i][8]) && (base[i][7] >= base[i][9]) && (base[i][7] >= base[i][10]) && 
+				      (base[i][7] >= base[i][11]) && (base[i][7] >= base[i][12]) && (base[i][7] >= base[i][13]) &&
+			      	      (base[i][7] >= base[i][14]) && (base[i][7] >= base[i][15]) && (base[i][7] >= base[i][16]) &&
+			      	      (base[i][7] >= base[i][17]) && (base[i][7] >= base[i][18]) && (base[i][7] >= base[i][19]) ) begin
+				pattern[i] = 5'b00111;
+			end else if ( (base[i][8] >= base[i][9]) && (base[i][8] >= base[i][10]) && (base[i][8] >= base[i][11]) &&
+				      (base[i][8] >= base[i][12]) && (base[i][8] >= base[i][13]) && (base[i][8] >= base[i][14]) &&
+			      	      (base[i][8] >= base[i][15]) && (base[i][8] >= base[i][16]) && (base[i][8] >= base[i][17]) &&
+			      	      (base[i][8] >= base[i][18]) && (base[i][8] >= base[i][19]) ) begin
+				pattern[i] = 5'b01000;
+			end else if ( (base[i][9] >= base[i][10]) && (base[i][9] >= base[i][11]) && (base[i][9] >= base[i][12]) &&
+		       		      (base[i][9] >= base[i][13]) && (base[i][9] >= base[i][14]) && (base[i][9] >= base[i][15]) &&
+			      	      (base[i][9] >= base[i][16]) && (base[i][9] >= base[i][17]) && (base[i][9] >= base[i][18]) &&
+			      	      (base[i][9] >= base[i][19]) ) begin
+				pattern[i] = 5'b01001;
+			end else if ( (base[i][10] >= base[i][11]) && (base[i][10] >= base[i][12]) && (base[i][10] >= base[i][13]) &&
+		       		      (base[i][10] >= base[i][14]) && (base[i][10] >= base[i][15]) && (base[i][10] >= base[i][16]) &&
+			      	      (base[i][10] >= base[i][17]) && (base[i][10] >= base[i][18]) && (base[i][10] >= base[i][19]) ) begin
+				pattern[i] = 5'b01010;
+			end else if ( (base[i][11] >= base[i][12]) && (base[i][11] >= base[i][13]) && (base[i][11] >= base[i][14]) && 
+				      (base[i][11] >= base[i][15]) && (base[i][11] >= base[i][16]) && (base[i][11] >= base[i][17]) &&
+			      	      (base[i][11] >= base[i][18]) && (base[i][11] >= base[i][19]) ) begin
+				pattern[i] = 5'b01011;
+			end else if ( (base[i][12] >= base[i][13]) && (base[i][12] >= base[i][14]) && (base[i][12] >= base[i][15]) && 
+				      (base[i][12] >= base[i][16]) && (base[i][12] >= base[i][17]) && (base[i][12] >= base[i][18]) &&
+			      	      (base[i][12] >= base[i][19]) ) begin
+				pattern[i] = 5'b01100;
+			end else if ( (base[i][13] >= base[i][14]) && (base[i][13] >= base[i][15]) && (base[i][13] >= base[i][16]) && 
+				      (base[i][13] >= base[i][17]) && (base[i][13] >= base[i][18]) && (base[i][13] >= base[i][19]) ) begin
+				pattern[i] = 5'b01101;
+			end else if ( (base[i][14] >= base[i][15]) && (base[i][14] >= base[i][16]) && (base[i][14] >= base[i][17]) &&
+		       		      (base[i][14] >= base[i][18]) && (base[i][14] >= base[i][19]) ) begin
+				pattern[i] = 5'b01110;
+			end else if ( (base[i][15] >= base[i][16]) && (base[i][15] >= base[i][17]) && (base[i][15] >= base[i][18]) &&
+			      	      (base[i][15] >= base[i][19]) ) begin
+				pattern[i] = 5'b01111;
+			end else if ( (base[i][16] >= base[i][17]) && (base[i][16] >= base[i][18]) && (base[i][16] >= base[i][19]) ) begin
+				pattern[i] = 5'b10000;
+			end else if ( (base[i][17] >= base[i][18]) && (base[i][17] >= base[19]) ) begin
+				pattern[i] = 5'b10001;
+			end else if ( (base[i][18] >= base[i][19]) ) begin
+				pattern[i] = 5'b10010;
 			end else begin
-				pattern[i] = 2'b11;
+				pattern[i] = 5'b10011;
 			end
 		end
 
@@ -109,7 +205,7 @@ module mkScoreCalculator(ScoreCalculatorIfc); // 2048 + 2 cycles
 	// Compare between each motif and the picked string
 	// Get the score via Hamming Distance
 	//--------------------------------------------------------------------------------------------
-	Reg#(Vector#(MotifLength, Bit#(2))) patternR <- mkReg(replicate(0));
+	Reg#(Vector#(MotifLength, Bit#(5))) patternR <- mkReg(replicate(0));
 	Reg#(Bit#(32)) scoreR <- mkReg(0);
 	Reg#(Bit#(1)) getScoreCnt1 <- mkReg(0);
 	Reg#(Bit#(32)) getScoreCnt2 <- mkReg(0);
@@ -117,7 +213,7 @@ module mkScoreCalculator(ScoreCalculatorIfc); // 2048 + 2 cycles
 		motifQ.deq;
 		let m = motifQ.first;
 
-		Vector#(MotifLength, Bit#(2)) pattern = replicate(0);
+		Vector#(MotifLength, Bit#(5)) pattern = replicate(0);
 		if ( getScoreCnt1 == 0 ) begin
 			patternQ.deq;
 			let p = patternQ.first;
@@ -129,9 +225,9 @@ module mkScoreCalculator(ScoreCalculatorIfc); // 2048 + 2 cycles
 		
 		Bit#(32) score = scoreR;
 		for ( Integer i = 0; i < valueOf(PeNumMotif); i = i + 1 ) begin
-			Bit#(32) motif = truncate(m >> (i * 32));
+			Bit#(MotifSize) motif = truncate(m >> (i * valueOf(MotifSize)));
 			for ( Integer j = 0; j < valueOf(MotifLength); j = j + 1 ) begin
-				Bit#(2) c = truncate(motif >> (j * 2));
+				Bit#(5) c = truncate(motif >> (j * 5));
 				if ( c != pattern[j] ) score = score + 1;
 			end
 		end
@@ -151,7 +247,7 @@ module mkScoreCalculator(ScoreCalculatorIfc); // 2048 + 2 cycles
 	method Action putMotifUnchanged(Bit#(MotifRelayLength) m);
 		motifUnchangedQ.enq(m);
 	endmethod
-	method Action putMotifChanged(Bit#(32) m);
+	method Action putMotifChanged(Bit#(MotifSize) m);
 		motifChangedQ.enq(m);
 	endmethod
 	method ActionValue#(Bit#(32)) get;
