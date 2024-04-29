@@ -12,7 +12,7 @@ import Profiler::*;
 
 // Sequences
 typedef 32768 SeqNum;
-typedef 300 SeqLength;
+typedef 256 SeqLength;
 typedef TMul#(SeqLength, 5) SeqSize;
 // Motifs
 typedef 16 MotifLength;
@@ -45,7 +45,7 @@ module mkGibbsSampler(GibbsSamplerIfc); //  cycles
 
 	// I/O
 	FIFO#(Bit#(SeqSize)) sequenceQ <- mkFIFO;
-	FIFO#(Bit#(MotifRelayLength)) motifQ <- mkSizedBRAMFIFO(valueOf(MotifRelaySize));
+	FIFO#(Bit#(MotifRelayLength)) motifQ <- mkFIFO;
 	//--------------------------------------------------------------------------------------------
 	// Get PSSM First
 	//--------------------------------------------------------------------------------------------
