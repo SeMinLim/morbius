@@ -16,6 +16,12 @@
 #define NUMITER 1
 
 
+int base[4*MOTIFLENGTH];
+int resultsScore = 0;
+//int positionQ[SEQNUM*SEQLENGTH*NUMSEEDS];
+//int posIdx = 0;
+
+
 // Elapsed time checker
 static inline double timeCheckerCPU(void) {
         struct rusage ru;
@@ -23,19 +29,38 @@ static inline double timeCheckerCPU(void) {
         return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000;
 }
 
-// Get a score of motifs
-int score( char *motifs ) {
-	// Phase 1
-	// Pick the most frequent letter at each motif position
-	char pattern[MOTIFLENGTH];
+// Get a base matrix
+void getBase( char *motifs ) {
 	for ( int i = 0; i < MOTIFLENGTH; i ++ ) {
-		int a = 0, c = 0, g = 0, t = 0;
-		for ( int j = 0; j < SEQNUM; j ++ ) {
+		int a = 1, c = 1, g = 1, t = 1;
+		for ( int j = 1; j < SEQNUM; j ++ ) {
 			if ( motifs[MOTIFLENGTH*j+i] == 'A' ) a += 1;
 			else if ( motifs[MOTIFLENGTH*j+i] == 'C' ) c += 1;
 			else if ( motifs[MOTIFLENGTH*j+i] == 'G' ) g += 1;
 			else if ( motifs[MOTIFLENGTH*j+i] == 'T' ) t += 1;
 		}
+		base[i] = a;
+		base[MOTIFLENGTH*1 + i] = c;
+		base[MOTIFLENGTH*2 + i] = g;
+		base[MOTIFLENGTH*3 + i] = t;
+	}
+}
+
+// Get a score of motifs
+int score( char *motifs, char *updatedMotif ) {
+	// Phase 1
+	// Pick the most frequent letter at each motif position
+	char pattern[MOTIFLENGTH];
+	for ( int i = 0; i < MOTIFLENGTH; i ++ ) {
+		if ( updatedMotif[i] == 'A' ) base[i] += 1;
+		else if ( updatedMotif[i] == 'C' ) base[MOTIFLENGTH*1 + i] += 1;
+		else if ( updatedMotif[i] == 'G' ) base[MOTIFLENGTH*2 + i] += 1;
+		else if ( updatedMotif[i] == 'T' ) base[MOTIFLENGTH*3 + i] += 1;
+
+		int a = base[i];
+		int c = base[MOTIFLENGTH*1 + i];
+		int g = base[MOTIFLENGTH*2 + i];
+		int t = base[MOTIFLENGTH*3 + i];
 
 		if ( a >= c && a >= g && a >= t ) pattern[i] = 'A';
 		else if ( c >= g && c >= t ) pattern[i] = 'C';
@@ -63,23 +88,25 @@ int score( char *motifs ) {
 
 // Make position specific score matrix
 void makePSSM( float *pssm, char *motifs, int seqIdx ) {
-	for ( int i = 0; i < MOTIFLENGTH; i ++ ) {
-		int a = 1, c = 1, g = 1, t = 1;
-		for ( int j = 0; j < SEQNUM; j ++ ) {
-			// Build PSSM based on the motifs except for a picked sequence's motif
-			if ( j != seqIdx ) {
-				if ( motifs[MOTIFLENGTH*j+i] == 'A' ) a += 1;
-				else if ( motifs[MOTIFLENGTH*j+i] == 'C' ) c += 1;
-				else if ( motifs[MOTIFLENGTH*j+i] == 'G' ) g += 1;
-				else if ( motifs[MOTIFLENGTH*j+i] == 'T' ) t += 1;
-			}
+	if ( seqIdx > 0 ) {
+		for ( int i = 0; i < MOTIFLENGTH; i ++ ) {
+			if ( motifs[MOTIFLENGTH*seqIdx + i] == 'A' ) base[i] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + i] == 'C' ) base[MOTIFLENGTH*1 + i] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + i] == 'G' ) base[MOTIFLENGTH*2 + i] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + i] == 'T' ) base[MOTIFLENGTH*3 + i] -= 1;
 		}
+	}
 
-		float total = (float)(a + c + g + t);
-		pssm[i] = (float)a / total;
-		pssm[MOTIFLENGTH*1+i] = (float)c / total;
-		pssm[MOTIFLENGTH*2+i] = (float)g / total;
-		pssm[MOTIFLENGTH*3+i] = (float)t / total;
+	for ( int i = 0; i < MOTIFLENGTH; i ++ ) {
+		int a = base[i];
+		int c = base[MOTIFLENGTH*1 + i];
+		int g = base[MOTIFLENGTH*2 + i];
+		int t = base[MOTIFLENGTH*3 + i];
+
+		pssm[i] = (float)a / (float)SEQNUM;
+		pssm[MOTIFLENGTH*1+i] = (float)c / (float)SEQNUM;
+		pssm[MOTIFLENGTH*2+i] = (float)g / (float)SEQNUM;
+		pssm[MOTIFLENGTH*3+i] = (float)t / (float)SEQNUM;
 	}
 }
 
@@ -113,6 +140,7 @@ void profile( char *updatedMotif, char *sequence, float *pssm ) {
 		partialSum += probs[i];
 		if ( (partialSum/sumProbs) >= randVal ) {
 			position = i;
+			//positionQ[posIdx++] = i;		
 			break;
 		}
 	}
@@ -134,7 +162,8 @@ void gibbsSampler( char *results, char *sequences ) {
 			results[MOTIFLENGTH*i + j] = c;
 		}
 	}
-	int resultsScore = score(motifs);
+	// Get a base matrix
+	getBase(motifs);
 
 	// Phase 2
 	// Update the motifs over 20 x #sequence
@@ -148,7 +177,7 @@ void gibbsSampler( char *results, char *sequences ) {
 				sequence[k] = sequences[SEQLENGTH*j + k];
 			}
 			
-			// Make PSSM first
+			// Make PSSM
 			makePSSM(pssm, motifs, j);
 			
 			// Go to profiling step then
@@ -158,14 +187,21 @@ void gibbsSampler( char *results, char *sequences ) {
 			for ( int k = 0; k < MOTIFLENGTH; k ++ ) {
 				motifs[MOTIFLENGTH*j + k] = updatedMotif[k];
 			}
-
+			
 			// Compare the scores & Update motifs or not based on the score
-			int currentScore = score(motifs);
-			if ( currentScore < resultsScore ) {
+			int currentScore = score(motifs, updatedMotif);
+			if ( j == 0 ) {
 				for ( int k = 0; k < SEQNUM*MOTIFLENGTH; k ++ ) {
 					results[k] = motifs[k];
 				}
 				resultsScore = currentScore;
+			} else {
+				if ( currentScore < resultsScore ) {
+					for ( int k = 0; k < SEQNUM*MOTIFLENGTH; k ++ ) {
+						results[k] = motifs[k];
+					}
+					resultsScore = currentScore;
+				}
 			}
 		}
 	}
@@ -179,15 +215,13 @@ void gibbsSamplerWrapper( char *bestMotifs, char *sequences ) {
 	for ( int i = 0; i < NUMSEEDS; i ++ ) {
 		gibbsSampler(results, sequences);
 		if ( i == 0 ) {
-			int currentScore = score(results);
-			bestScore = currentScore;
+			bestScore = resultsScore;
 			for ( int j = 0; j < SEQNUM*MOTIFLENGTH; j ++ ) {
 				bestMotifs[j] = results[j];
 			}
 		} else {
-			int currentScore = score(results);
-			if ( currentScore < bestScore ) {
-				bestScore = currentScore;
+			if ( resultsScore < bestScore ) {
+				bestScore = resultsScore;
 				for ( int j = 0; j < SEQNUM*MOTIFLENGTH; j ++ ) {
 					bestMotifs[j] = results[j];
 				}
@@ -206,7 +240,7 @@ int main() {
 	int seqIdx = 0;
 	char seqLine[1024];
 	char *sequences = (char*)malloc(sizeof(char)*SEQNUM*SEQLENGTH);
-	char *filename_sequences = "../../../dataset/DATASET_1.fasta";
+	char *filename_sequences = "../../dataset/DATASET_DNA_3.fasta";
 	FILE* f_data_sequences = fopen(filename_sequences, "r");
 	if ( f_data_sequences == NULL ) {
 		printf( "File not found: %s\n", filename_sequences );
@@ -239,10 +273,15 @@ int main() {
 	//--------------------------------------------------------------------------------------------
 	printf( "Elapsed Time: %.8f\n", processTime );
 	fflush( stdout );
+	//int s = 0;
+	//for ( int i = 0; i < posIdx; i ++ ) {
+	//	s += positionQ[i];
+	//}
+	//printf("%f\n", (float)s / (float)posIdx );
 	//--------------------------------------------------------------------------------------------
 	// Print the results
 	//--------------------------------------------------------------------------------------------
-	char *filename_result = "DATASET_1_result.fasta";
+	char *filename_result = "DATASET_DNA_3_result.fasta";
 	FILE *f_data_result = fopen(filename_result, "w");
 	printf( "Storing Motifs Started!\n" );
 	fflush( stdout );
