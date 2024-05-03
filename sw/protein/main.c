@@ -16,6 +16,10 @@
 #define NUMITER 1
 
 
+int base[20*MOTIFLENGTH];
+int resultsScore = 0;
+
+
 // Elapsed time checker
 static inline double timeCheckerCPU(void) {
         struct rusage ru;
@@ -23,17 +27,14 @@ static inline double timeCheckerCPU(void) {
         return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000;
 }
 
-// Get a score of motifs
-int score( char *motifs ) {
-	// Phase 1
-	// Pick the most frequent letter at each motif position
-	char pattern[MOTIFLENGTH];
+// Get a base matrix
+void getBase( char *motifs ) {
 	for ( int cnt_1 = 0; cnt_1 < MOTIFLENGTH; cnt_1 ++ ) {
-		int m = 0, t = 0, n = 0, k = 0, s = 0;
-		int r = 0, v = 0, a = 0, d = 0, e = 0;
-		int g = 0, f = 0, l = 0, y = 0, c = 0;
-		int w = 0, p = 0, h = 0, q = 0, i = 0;	
-		for ( int cnt_2 = 0; cnt_2 < SEQNUM; cnt_2 ++ ) {
+		int m = 1, t = 1, n = 1, k = 1, s = 1;
+		int r = 1, v = 1, a = 1, d = 1, e = 1;
+		int g = 1, f = 1, l = 1, y = 1, c = 1;
+		int w = 1, p = 1, h = 1, q = 1, i = 1;	
+		for ( int cnt_2 = 1; cnt_2 < SEQNUM; cnt_2 ++ ) {
 			if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'M' ) m += 1;
 			else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'T' ) t += 1;
 			else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'N' ) n += 1;
@@ -55,6 +56,77 @@ int score( char *motifs ) {
 			else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'Q' ) q += 1;
 			else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'I' ) i += 1;
 		}
+		base[i] = m;
+		base[MOTIFLENGTH*1 + i] = t;
+		base[MOTIFLENGTH*2 + i] = n;
+		base[MOTIFLENGTH*3 + i] = k;
+		base[MOTIFLENGTH*4 + i] = s;
+		base[MOTIFLENGTH*5 + i] = r;
+		base[MOTIFLENGTH*6 + i] = v;
+		base[MOTIFLENGTH*7 + i] = a;
+		base[MOTIFLENGTH*8 + i] = d;
+		base[MOTIFLENGTH*9 + i] = e;
+		base[MOTIFLENGTH*10 + i] = g;
+		base[MOTIFLENGTH*11 + i] = f;
+		base[MOTIFLENGTH*12 + i] = l;
+		base[MOTIFLENGTH*13 + i] = y;
+		base[MOTIFLENGTH*14 + i] = c;
+		base[MOTIFLENGTH*15 + i] = w;
+		base[MOTIFLENGTH*16 + i] = p;
+		base[MOTIFLENGTH*17 + i] = h;
+		base[MOTIFLENGTH*18 + i] = q;
+		base[MOTIFLENGTH*19 + i] = i;
+	}
+}
+
+// Get a score of motifs
+int score( char *motifs, char *updatedMotif ) {
+	// Phase 1
+	// Pick the most frequent letter at each motif position
+	char pattern[MOTIFLENGTH];
+	for ( int cnt_1 = 0; cnt_1 < MOTIFLENGTH; cnt_1 ++ ) {
+		if ( updatedmotif[cnt_1] == 'M' ) base[cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'T' ) base[MOTIFLENGTH*1 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'N' ) base[MOTIFLENGTH*2 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'K' ) base[MOTIFLENGTH*3 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'S' ) base[MOTIFLENGTH*4 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'R' ) base[MOTIFLENGTH*5 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'V' ) base[MOTIFLENGTH*6 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'A' ) base[MOTIFLENGTH*7 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'D' ) base[MOTIFLENGTH*8 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'E' ) base[MOTIFLENGTH*9 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'G' ) base[MOTIFLENGTH*10 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'F' ) base[MOTIFLENGTH*11 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'L' ) base[MOTIFLENGTH*12 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'Y' ) base[MOTIFLENGTH*13 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'C' ) base[MOTIFLENGTH*14 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'W' ) base[MOTIFLENGTH*15 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'P' ) base[MOTIFLENGTH*16 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'H' ) base[MOTIFLENGTH*17 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'Q' ) base[MOTIFLENGTH*18 + cnt_1] += 1;
+		else if ( updatedmotif[cnt_1] == 'I' ) base[MOTIFLENGTH*19 + cnt_1] += 1;
+
+		int m = base[cnt_1];
+		int t = base[MOTIFLENGTH*1 + cnt_1];
+		int n = base[MOTIFLENGTH*2 + cnt_1];
+		int k = base[MOTIFLENGTH*3 + cnt_1];
+		int s = base[MOTIFLENGTH*4 + cnt_1];
+		int r = base[MOTIFLENGTH*5 + cnt_1];
+		int v = base[MOTIFLENGTH*6 + cnt_1];
+		int a = base[MOTIFLENGTH*7 + cnt_1];
+		int d = base[MOTIFLENGTH*8 + cnt_1];
+		int e = base[MOTIFLENGTH*9 + cnt_1];
+		int g = base[MOTIFLENGTH*10 + cnt_1];
+		int f = base[MOTIFLENGTH*11 + cnt_1];
+		int l = base[MOTIFLENGTH*12 + cnt_1];
+		int y = base[MOTIFLENGTH*13 + cnt_1];
+		int c = base[MOTIFLENGTH*14 + cnt_1];
+		int w = base[MOTIFLENGTH*15 + cnt_1];
+		int p = base[MOTIFLENGTH*16 + cnt_1];
+		int h = base[MOTIFLENGTH*17 + cnt_1];
+		int q = base[MOTIFLENGTH*18 + cnt_1];
+		int i = base[MOTIFLENGTH*19 + cnt_1];
+	
 
 		if ( m >= t && m >= n && m >= k && m >= s && m >= r &&
 		     m >= v && m >= a && m >= d && m >= e && m >= g &&
@@ -146,59 +218,73 @@ int score( char *motifs ) {
 
 // Make position specific score matrix
 void makePSSM( float *pssm, char *motifs, int seqIdx ) {
-	for ( int cnt_1 = 0; cnt_1 < MOTIFLENGTH; cnt_1 ++ ) {
-		int m = 1, t = 1, n = 1, k = 1, s = 1;
-		int r = 1, v = 1, a = 1, d = 1, e = 1;
-		int g = 1, f = 1, l = 1, y = 1, c = 1;
-		int w = 1, p = 1, h = 1, q = 1, i = 1;	
-		for ( int cnt_2 = 0; cnt_2 < SEQNUM; cnt_2 ++ ) {
-			// Build PSSM based on the motifs except for a picked sequence's motif
-			if ( cnt_2 != seqIdx ) {
-				if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'M' ) m += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'T' ) t += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'N' ) n += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'K' ) k += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'S' ) s += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'R' ) r += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'V' ) v += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'A' ) a += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'D' ) d += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'E' ) e += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'G' ) g += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'F' ) f += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'L' ) l += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'Y' ) y += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'C' ) c += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'W' ) w += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'P' ) p += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'H' ) h += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'Q' ) q += 1;
-				else if ( motifs[MOTIFLENGTH*cnt_2 + cnt_1] == 'I' ) i += 1;
-			}
+	if ( seqIdx > 0 ) {	
+		for ( int cnt = 0; cnt < MOTIFLENGTH; cnt ++ ) {
+			if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'M' ) base[cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'T' ) base[MOTIFLENGTH*1 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'N' ) base[MOTIFLENGTH*2 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'K' ) base[MOTIFLENGTH*3 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'S' ) base[MOTIFLENGTH*4 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'R' ) base[MOTIFLENGTH*5 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'V' ) base[MOTIFLENGTH*6 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'A' ) base[MOTIFLENGTH*7 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'D' ) base[MOTIFLENGTH*8 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'E' ) base[MOTIFLENGTH*9 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'G' ) base[MOTIFLENGTH*10 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'F' ) base[MOTIFLENGTH*11 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'L' ) base[MOTIFLENGTH*12 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'Y' ) base[MOTIFLENGTH*13 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'C' ) base[MOTIFLENGTH*14 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'W' ) base[MOTIFLENGTH*15 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'P' ) base[MOTIFLENGTH*16 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'H' ) base[MOTIFLENGTH*17 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'Q' ) base[MOTIFLENGTH*18 + cnt] -= 1;
+			else if ( motifs[MOTIFLENGTH*seqIdx + cnt] == 'I' ) base[MOTIFLENGTH*19 + cnt] -= 1;
 		}
+	}
 
-		float total = (float)(m + t + n + k + s + r + v + a + d + e +
-				      g + f + l + y + c + w + p + h + q + i);
-		pssm[cnt_1] = (float)m / total;
-		pssm[MOTIFLENGTH*1 + cnt_1] = (float)t / total;
-		pssm[MOTIFLENGTH*2 + cnt_1] = (float)n / total;
-		pssm[MOTIFLENGTH*3 + cnt_1] = (float)k / total;
-		pssm[MOTIFLENGTH*4 + cnt_1] = (float)s / total;
-		pssm[MOTIFLENGTH*5 + cnt_1] = (float)r / total;
-		pssm[MOTIFLENGTH*6 + cnt_1] = (float)v / total;
-		pssm[MOTIFLENGTH*7 + cnt_1] = (float)a / total;
-		pssm[MOTIFLENGTH*8 + cnt_1] = (float)d / total;
-		pssm[MOTIFLENGTH*9 + cnt_1] = (float)e / total;
-		pssm[MOTIFLENGTH*10 + cnt_1] = (float)g / total;
-		pssm[MOTIFLENGTH*11 + cnt_1] = (float)f / total;
-		pssm[MOTIFLENGTH*12 + cnt_1] = (float)l / total;
-		pssm[MOTIFLENGTH*13 + cnt_1] = (float)y / total;
-		pssm[MOTIFLENGTH*14 + cnt_1] = (float)c / total;
-		pssm[MOTIFLENGTH*15 + cnt_1] = (float)w / total;
-		pssm[MOTIFLENGTH*16 + cnt_1] = (float)p / total;
-		pssm[MOTIFLENGTH*17 + cnt_1] = (float)h / total;
-		pssm[MOTIFLENGTH*18 + cnt_1] = (float)q / total;
-		pssm[MOTIFLENGTH*19 + cnt_1] = (float)i / total;
+	for ( int cnt = 0; cnt < MOTIFLENGTH; cnt ++ ) {
+		int m = base[cnt];
+		int t = base[MOTIFLENGTH*1 + cnt];
+		int n = base[MOTIFLENGTH*2 + cnt];
+		int k = base[MOTIFLENGTH*3 + cnt];
+		int s = base[MOTIFLENGTH*4 + cnt];
+		int r = base[MOTIFLENGTH*5 + cnt];
+		int v = base[MOTIFLENGTH*6 + cnt];
+		int a = base[MOTIFLENGTH*7 + cnt];
+		int d = base[MOTIFLENGTH*8 + cnt];
+		int e = base[MOTIFLENGTH*9 + cnt];
+		int g = base[MOTIFLENGTH*10 + cnt];
+		int f = base[MOTIFLENGTH*11 + cnt];
+		int l = base[MOTIFLENGTH*12 + cnt];
+		int y = base[MOTIFLENGTH*13 + cnt];
+		int c = base[MOTIFLENGTH*14 + cnt];
+		int w = base[MOTIFLENGTH*15 + cnt];
+		int p = base[MOTIFLENGTH*16 + cnt];
+		int h = base[MOTIFLENGTH*17 + cnt];
+		int q = base[MOTIFLENGTH*18 + cnt];
+		int i = base[MOTIFLENGTH*19 + cnt];
+
+		pssm[cnt] = (float)m / (float)SEQNUM;
+		pssm[MOTIFLENGTH*1 + cnt] = (float)t / (float)SEQNUM;
+		pssm[MOTIFLENGTH*2 + cnt] = (float)n / (float)SEQNUM;
+		pssm[MOTIFLENGTH*3 + cnt] = (float)k / (float)SEQNUM;
+		pssm[MOTIFLENGTH*4 + cnt] = (float)s / (float)SEQNUM;
+		pssm[MOTIFLENGTH*5 + cnt] = (float)r / (float)SEQNUM;
+		pssm[MOTIFLENGTH*6 + cnt] = (float)v / (float)SEQNUM;
+		pssm[MOTIFLENGTH*7 + cnt] = (float)a / (float)SEQNUM;
+		pssm[MOTIFLENGTH*8 + cnt] = (float)d / (float)SEQNUM;
+		pssm[MOTIFLENGTH*9 + cnt] = (float)e / (float)SEQNUM;
+		pssm[MOTIFLENGTH*10 + cnt] = (float)g / (float)SEQNUM;
+		pssm[MOTIFLENGTH*11 + cnt] = (float)f / (float)SEQNUM;
+		pssm[MOTIFLENGTH*12 + cnt] = (float)l / (float)SEQNUM;
+		pssm[MOTIFLENGTH*13 + cnt] = (float)y / (float)SEQNUM;
+		pssm[MOTIFLENGTH*14 + cnt] = (float)c / (float)SEQNUM;
+		pssm[MOTIFLENGTH*15 + cnt] = (float)w / (float)SEQNUM;
+		pssm[MOTIFLENGTH*16 + cnt] = (float)p / (float)SEQNUM;
+		pssm[MOTIFLENGTH*17 + cnt] = (float)h / (float)SEQNUM;
+		pssm[MOTIFLENGTH*18 + cnt] = (float)q / (float)SEQNUM;
+		pssm[MOTIFLENGTH*19 + cnt] = (float)i / (float)SEQNUM;
 	}
 }
 
@@ -270,7 +356,8 @@ void gibbsSampler( char *results, char *sequences ) {
 			results[MOTIFLENGTH*cnt_1 + cnt_2] = c;
 		}
 	}
-	int resultsScore = score(motifs);
+	// Get a base matrix
+	getBase(motifs);
 
 	// Phase 2
 	// Update the motifs over #sequence
@@ -296,12 +383,19 @@ void gibbsSampler( char *results, char *sequences ) {
 			}
 
 			// Compare the scores & Update motifs or not based on the score
-			int currentScore = score(motifs);
-			if ( currentScore < resultsScore ) {
+			int currentScore = score(motifs, updatedMotif);
+			if ( cnt_2 == 0 ) {
 				for ( int cnt_3 = 0; cnt_3 < SEQNUM*MOTIFLENGTH; cnt_3 ++ ) {
 					results[cnt_3] = motifs[cnt_3];
 				}
 				resultsScore = currentScore;
+			} else {
+				if ( currentScore < resultsScore ) {
+					for ( int cnt_3 = 0; cnt_3 < SEQNUM*MOTIFLENGTH; cnt_3 ++ ) {
+						results[cnt_3] = motifs[cnt_3];
+					}
+					resultsScore = currentScore;
+				}
 			}
 		}
 	}
@@ -315,15 +409,13 @@ void gibbsSamplerWrapper( char *bestMotifs, char *sequences ) {
 	for ( int cnt_1 = 0; cnt_1 < NUMSEEDS; cnt_1 ++ ) {
 		gibbsSampler(results, sequences);
 		if ( cnt_1 == 0 ) {
-			int currentScore = score(results);
-			bestScore = currentScore;
+			bestScore = resultsScore;
 			for ( int cnt_2 = 0; cnt_2 < SEQNUM*MOTIFLENGTH; cnt_2 ++ ) {
 				bestMotifs[cnt_2] = results[cnt_2];
 			}
 		} else {
-			int currentScore = score(results);
-			if ( currentScore < bestScore ) {
-				bestScore = currentScore;
+			if ( resultsScore < bestScore ) {
+				bestScore = resultsScore;
 				for ( int cnt_2 = 0; cnt_2 < SEQNUM*MOTIFLENGTH; cnt_2 ++ ) {
 					bestMotifs[cnt_2] = results[cnt_2];
 				}
